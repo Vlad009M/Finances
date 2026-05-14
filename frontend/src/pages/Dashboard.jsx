@@ -5,6 +5,7 @@ import Charts from './Charts.jsx'
 import AIAnalysis from './AIAnalysis.jsx'
 import api from '../api/index.js'
 import EditModal from '../components/EditModal.jsx'
+import { sanitize } from '../utils/sanitize.js'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -94,7 +95,11 @@ export default function Dashboard() {
     if (!form.amount || !form.categoryId) { toast.error('Заповни всі поля'); return }
     setLoading(true)
     try {
-      await api.post('/transactions', form)
+      await api.post('/transactions', {
+      ...form,
+      description: sanitize(form.description),
+      amount: parseFloat(form.amount)
+    })
       setForm({ amount: '', type: 'expense', description: '', categoryId: '', date: now.toISOString().split('T')[0] })
       setShowForm(false)
       toast.success('Транзакцію додано!')
@@ -111,11 +116,13 @@ export default function Dashboard() {
     } catch { toast.error('Помилка') }
   }
 
-  const logout = () => {
-    localStorage.removeItem('token')
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {}
     localStorage.removeItem('user')
     navigate('/login')
-  }
+}
 
   const incomeChange = prevStats.income > 0 ? Math.round(((stats.income - prevStats.income) / prevStats.income) * 100) : null
   const expenseChange = prevStats.expense > 0 ? Math.round(((stats.expense - prevStats.expense) / prevStats.expense) * 100) : null

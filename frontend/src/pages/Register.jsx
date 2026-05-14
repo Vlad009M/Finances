@@ -17,14 +17,13 @@ export default function Register() {
     setError('')
     try {
       const res = await api.post('/auth/register', { name, email, password })
-      localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
       navigate('/dashboard')
-    } catch {
-      setError('Помилка реєстрації. Можливо цей email вже використовується.')
+    } catch (e) {
+      setError(e.response?.data?.error || 'Помилка реєстрації')
     }
     setLoading(false)
-  }
+}
 
   return (
     <div style={s.container}>
