@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
+import Charts from './Charts.jsx'
 
 const COLORS = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#a18cd1', '#fda085']
 
@@ -306,41 +307,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* CHARTS */}
+       {/* CHARTS */}
         {activeTab === 'charts' && (
-          <div>
-            <h1 style={s.title}>Графіки</h1>
-            <div style={s.chartsRow}>
-              <div style={s.card}>
-                <h3 style={{ marginBottom: 16 }}>Витрати по категоріях</h3>
-                {pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v) => `₴${v.toLocaleString()}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p style={{ color: '#999', textAlign: 'center', padding: 40 }}>Додай витрати щоб побачити графік</p>
-                )}
-              </div>
-              <div style={s.card}>
-                <h3 style={{ marginBottom: 16 }}>Доходи vs Витрати (6 місяців)</h3>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={barData}>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(v) => `₴${v.toLocaleString()}`} />
-                    <Bar dataKey="income" fill="#43e97b" name="Доходи" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expense" fill="#fa709a" name="Витрати" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
+          <Charts transactions={allTransactions} categories={categories} />
         )}
       </div>
     </div>
