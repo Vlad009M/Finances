@@ -159,8 +159,8 @@ export default function Dashboard() {
       {/* SIDEBAR */}
       <div style={s.sidebar}>
         <div style={s.logoRow}>
-          <div style={s.logoIcon}><i className="ti ti-coin" /></div>
-          <span style={s.logoText}>Finances</span>
+          <img src="/Aperio.png" alt="Aperio" style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover' }} />
+          <span style={s.logoText}>Aperio</span>
         </div>
         <div style={s.navLabel}>Меню</div>
         {navItems.map(item => (
