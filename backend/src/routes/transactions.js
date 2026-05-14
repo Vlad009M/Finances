@@ -10,7 +10,6 @@ router.get('/', auth, async (req, res) => {
   try {
     const { month, year, type } = req.query
     const where = { userId: req.userId }
-
     if (month && year) {
       where.date = {
         gte: new Date(year, month - 1, 1),
@@ -18,7 +17,6 @@ router.get('/', auth, async (req, res) => {
       }
     }
     if (type) where.type = type
-
     const transactions = await prisma.transaction.findMany({
       where,
       include: { category: true },
@@ -51,34 +49,58 @@ router.post('/', auth, async (req, res) => {
   }
 })
 
+// Оновити транзакцію
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const existing = await prisma.transaction.findUnique({
+      where: { id: req.params.id }
+    })
+    if (!existing) return res.status(404).json({ error: 'Транзакцію не знайдено' })
+    if (existing.userId !== req.userId) return res.status(403).json({ error: 'Немає доступу' })
+
+    const { amount, type, description, categoryId, date } = req.body
+    const updated = await prisma.transaction.update({
+      where: { id: req.params.id },
+      data: {
+        amount: parseFloat(amount),
+        type,
+        description,
+        categoryId,
+        date: date ? new Date(date) : existing.date
+      },
+      include: { category: true }
+    })
+    res.json(updated)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Видалити транзакцію
 router.delete('/:id', auth, async (req, res) => {
   try {
-    await prisma.transaction.delete({
-      where: { id: req.params.id, userId: req.userId }
+    const existing = await prisma.transaction.findUnique({
+      where: { id: req.params.id }
     })
+    if (!existing) return res.status(404).json({ error: 'Транзакцію не знайдено' })
+    if (existing.userId !== req.userId) return res.status(403).json({ error: 'Немає доступу' })
+
+    await prisma.transaction.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })
 
-// Статистика по місяцях
+// Статистика
 router.get('/stats', auth, async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
       where: { userId: req.userId },
       include: { category: true }
     })
-
-    const income = transactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0)
-
-    const expense = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0)
-
+    const income = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const expense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     res.json({ income, expense, balance: income - expense })
   } catch (e) {
     res.status(500).json({ error: e.message })
