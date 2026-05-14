@@ -35,23 +35,3 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Сервер запущено на порту ${PORT}`)
 })
-
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: 'http://localhost:3001/api',
-  withCredentials: true
-})
-
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('user')
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  }
-)
-
-export default api
