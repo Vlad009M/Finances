@@ -20,6 +20,7 @@ app.use('/api/auth', authLimiter)
 app.use('/api/auth', require('./routes/auth'))
 app.use('/api/transactions', require('./routes/transactions'))
 app.use('/api/categories', require('./routes/categories'))
+app.use('/api/ai', require('./routes/ai'))
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Finances API працює!' })

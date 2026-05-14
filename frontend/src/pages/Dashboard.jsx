@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
 import Charts from './Charts.jsx'
+import AIAnalysis from './AIAnalysis.jsx'
 
 const COLORS = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#a18cd1', '#fda085']
 
@@ -169,6 +170,7 @@ export default function Dashboard() {
           { id: 'dashboard', label: '📊 Дашборд' },
           { id: 'transactions', label: '📋 Транзакції' },
           { id: 'charts', label: '📈 Графіки' },
+          { id: 'ai', label: '🤖 AI Аналіз' },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             style={{ ...s.navBtn, ...(activeTab === tab.id ? s.navBtnActive : {}) }}>
@@ -311,6 +313,7 @@ export default function Dashboard() {
         {activeTab === 'charts' && (
           <Charts transactions={allTransactions} categories={categories} />
         )}
+        {activeTab === 'ai' && <AIAnalysis />}
       </div>
     </div>
   )
