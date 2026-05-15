@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
 
@@ -73,6 +74,13 @@ export default function AdminPanel() {
     }
     setSending(false)
   }
+
+  // Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setMsgModal(null) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   if (loading) return <div style={s.loading}>Завантаження...</div>
 
@@ -166,53 +174,54 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* Модалка повідомлення */}
-      {msgModal && (
-  <div style={s.overlay} onClick={e => e.target === e.currentTarget && setMsgModal(null)}>
-    <div style={s.modal}>
-      <div style={s.modalHeader}>
-        <h3 style={s.modalTitle}>Повідомлення для {msgModal.name}</h3>
-        <button onClick={() => setMsgModal(null)} style={s.closeBtn}>
-          <i className="ti ti-x" style={{ fontSize: 18 }} />
-        </button>
-      </div>
+      {/* Модалка повідомлення — через portal щоб завжди бути поверх всього */}
+      {msgModal && createPortal(
+        <div style={s.overlay} onClick={e => e.target === e.currentTarget && setMsgModal(null)}>
+          <div style={s.modal}>
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>Повідомлення для {msgModal.name}</h3>
+              <button onClick={() => setMsgModal(null)} style={s.closeBtn}>
+                <i className="ti ti-x" style={{ fontSize: 18 }} />
+              </button>
+            </div>
 
-      <div style={s.fieldGroup}>
-        <label style={s.label}>Отримувач</label>
-        <div style={s.recipientRow}>
-          <div style={s.recipientAvatar}>{msgModal.name[0].toUpperCase()}</div>
-          <div>
-            <div style={s.recipientName}>{msgModal.name}</div>
-            <div style={s.recipientEmail}>{msgModal.email}</div>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Отримувач</label>
+              <div style={s.recipientRow}>
+                <div style={s.recipientAvatar}>{msgModal.name[0].toUpperCase()}</div>
+                <div>
+                  <div style={s.recipientName}>{msgModal.name}</div>
+                  <div style={s.recipientEmail}>{msgModal.email}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Текст повідомлення</label>
+              <textarea
+                style={s.textarea}
+                placeholder="Введи повідомлення для користувача..."
+                value={msg}
+                onChange={e => setMsg(e.target.value)}
+                rows={5}
+                autoFocus
+              />
+              <div style={s.charCount}>{msg.length} символів</div>
+            </div>
+
+            <div style={s.modalBtns}>
+              <button onClick={() => { setMsgModal(null); setMsg('') }} style={s.cancelBtn}>
+                Скасувати
+              </button>
+              <button onClick={sendMessage} style={{ ...s.sendBtn, opacity: sending ? 0.7 : 1 }} disabled={sending}>
+                <i className="ti ti-send" style={{ fontSize: 14 }} />
+                {sending ? 'Надсилання...' : 'Надіслати'}
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div style={s.fieldGroup}>
-        <label style={s.label}>Текст повідомлення</label>
-        <textarea
-          style={s.textarea}
-          placeholder="Введи повідомлення для користувача..."
-          value={msg}
-          onChange={e => setMsg(e.target.value)}
-          rows={5}
-          autoFocus
-        />
-        <div style={s.charCount}>{msg.length} символів</div>
-      </div>
-
-      <div style={s.modalBtns}>
-        <button onClick={() => { setMsgModal(null); setMsg('') }} style={s.cancelBtn}>
-          Скасувати
-        </button>
-        <button onClick={sendMessage} style={{ ...s.sendBtn, opacity: sending ? 0.7 : 1 }} disabled={sending}>
-          <i className="ti ti-send" style={{ fontSize: 14 }} />
-          {sending ? 'Надсилання...' : 'Надіслати'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
@@ -242,37 +251,22 @@ const s = {
   rootRole: { background: '#EEEDFE', color: '#534AB7' },
   userRole: { background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)' },
   actions: { display: 'flex', gap: 6 },
-  actionBtn: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', transition: 'all 0.15s' },
+  actionBtn: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' },
   blockBtn: { color: '#985A00', borderColor: '#F5CBA7', background: '#FEF9F0' },
   unblockBtn: { color: '#3B6D11', borderColor: '#A9D18E', background: '#F0F7EC' },
   msgBtn: { color: '#534AB7', borderColor: '#AFA9EC', background: '#F5F4FE' },
   deleteBtn: { color: '#993C1D', borderColor: '#F5B8A8', background: '#FEF2EE' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' },
-  modal: { background: 'var(--color-background-primary)', borderRadius: 16, padding: 28, width: 460, maxWidth: '92vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', border: '0.5px solid var(--color-border-tertiary)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  modalTitleRow: { display: 'flex', alignItems: 'center', gap: 12 },
-  modalAvatar: { width: 44, height: 44, borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500, flexShrink: 0 },
-  modalTitle: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' },
-  modalEmail: { fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(2px)' },
+  modal: { background: 'var(--color-background-primary, #fff)', borderRadius: 16, padding: 28, width: 460, maxWidth: '92vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', border: '0.5px solid var(--color-border-tertiary)' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  modalTitle: { fontSize: 17, fontWeight: 500, color: 'var(--color-text-primary)', margin: 0 },
   closeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', display: 'flex', padding: 4, borderRadius: 6 },
-  modalInfo: { display: 'flex', alignItems: 'center', gap: 8, background: '#F5F4FE', border: '0.5px solid #AFA9EC', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#534AB7', marginBottom: 20 },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 },
   label: { fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' },
-  textarea: { padding: '12px 14px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, fontSize: 13, outline: 'none', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 },
-  charCount: { fontSize: 11, color: 'var(--color-text-tertiary)', textAlign: 'right' },
-  modalBtns: { display: 'flex', gap: 10, justifyContent: 'flex-end' },
-  cancelBtn: { padding: '10px 20px', background: 'none', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-secondary)' },
-  sendBtn: { display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px', background: '#7F77DD', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500 },
   recipientRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--color-background-secondary)', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)' },
   recipientAvatar: { width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', color: '#534AB7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 500, flexShrink: 0 },
   recipientName: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
   recipientEmail: { fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 },
-  modal: { background: 'var(--color-background-primary)', borderRadius: 16, padding: 28, width: 460, maxWidth: '92vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', border: '0.5px solid var(--color-border-tertiary)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 17, fontWeight: 500, color: 'var(--color-text-primary)' },
-  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', display: 'flex', padding: 4, borderRadius: 6 },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)' },
   textarea: { padding: '12px 14px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 },
   charCount: { fontSize: 11, color: 'var(--color-text-tertiary)', textAlign: 'right', marginTop: 4 },
   modalBtns: { display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 },

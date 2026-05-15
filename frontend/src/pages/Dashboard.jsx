@@ -43,7 +43,6 @@ export default function Dashboard() {
   })
   const [activeTab, setActiveTab] = useState('dashboard')
   const [messages, setMessages] = useState([])
-  const [showMessages, setShowMessages] = useState(false)
 
   const loadMessages = async () => {
     try {
@@ -109,10 +108,10 @@ export default function Dashboard() {
     setLoading(true)
     try {
       await api.post('/transactions', {
-      ...form,
-      description: sanitize(form.description),
-      amount: parseFloat(form.amount)
-    })
+        ...form,
+        description: sanitize(form.description),
+        amount: parseFloat(form.amount)
+      })
       setForm({ amount: '', type: 'expense', description: '', categoryId: '', date: now.toISOString().split('T')[0] })
       setShowForm(false)
       toast.success('Транзакцію додано!')
@@ -129,14 +128,20 @@ export default function Dashboard() {
     } catch { toast.error('Помилка') }
   }
 
-  const logout = async () => {
+  const markAsRead = async (id) => {
     try {
-      await api.post('/auth/logout')
+      await api.patch(`/messages/${id}/read`)
+      loadMessages()
     } catch {}
+  }
+
+  const logout = async () => {
+    try { await api.post('/auth/logout') } catch {}
     localStorage.removeItem('user')
     navigate('/login')
-}
+  }
 
+  const unreadCount = messages.filter(m => !m.read).length
   const incomeChange = prevStats.income > 0 ? Math.round(((stats.income - prevStats.income) / prevStats.income) * 100) : null
   const expenseChange = prevStats.expense > 0 ? Math.round(((stats.expense - prevStats.expense) / prevStats.expense) * 100) : null
   const savings = stats.income > 0 ? Math.round(((stats.income - stats.expense) / stats.income) * 100) : 0
@@ -165,12 +170,13 @@ export default function Dashboard() {
   })
 
   const navItems = [
-  { id: 'dashboard', icon: 'ti-layout-dashboard', label: 'Дашборд' },
-  { id: 'transactions', icon: 'ti-arrows-exchange', label: 'Транзакції' },
-  { id: 'charts', icon: 'ti-chart-bar', label: 'Графіки' },
-  { id: 'ai', icon: 'ti-robot', label: 'AI Аналіз' },
-  ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : [])
-]
+    { id: 'dashboard', icon: 'ti-layout-dashboard', label: 'Дашборд' },
+    { id: 'transactions', icon: 'ti-arrows-exchange', label: 'Транзакції' },
+    { id: 'charts', icon: 'ti-chart-bar', label: 'Графіки' },
+    { id: 'ai', icon: 'ti-robot', label: 'AI Аналіз' },
+    { id: 'messages', icon: 'ti-bell', label: 'Повідомлення', badge: unreadCount },
+    ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : [])
+  ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
   const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'VL'
@@ -188,17 +194,13 @@ export default function Dashboard() {
           <button key={item.id} onClick={() => setActiveTab(item.id)}
             style={{ ...s.navItem, ...(activeTab === item.id ? s.navActive : {}) }}>
             <i className={`ti ${item.icon}`} style={{ fontSize: 18 }} />
-            {item.label}
+            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+            {item.badge > 0 && (
+              <span style={s.navBadge}>{item.badge}</span>
+            )}
           </button>
         ))}
         <div style={s.navLabel}>Акаунт</div>
-        {messages.filter(m => !m.read).length > 0 && (
-          <button onClick={() => setShowMessages(true)} style={s.notifBtn}>
-            <i className="ti ti-bell" style={{ fontSize: 18 }} />
-            <span style={s.notifBadge}>{messages.filter(m => !m.read).length}</span>
-            Сповіщення
-          </button>
-        )}
         <button onClick={logout} style={s.navItem}>
           <i className="ti ti-logout" style={{ fontSize: 18 }} />
           Вийти
@@ -267,7 +269,6 @@ export default function Dashboard() {
             <div style={s.twoCol}>
               {/* LEFT */}
               <div>
-                {/* Balance card */}
                 <div style={s.balanceCard}>
                   <div style={s.balanceLabel}>Загальний баланс</div>
                   <div style={s.balanceAmount}>₴{stats.balance.toLocaleString()}</div>
@@ -287,7 +288,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Stats */}
                 <div style={s.statsGrid}>
                   <div style={s.statCard}>
                     <div style={{ ...s.statIcon, background: '#EAF3DE' }}>
@@ -325,7 +325,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Transactions */}
                 <div style={s.sectionHeader}>
                   <span style={s.sectionTitle}>Останні транзакції</span>
                   <span style={s.seeAll} onClick={() => setActiveTab('transactions')}>Всі →</span>
@@ -346,13 +345,9 @@ export default function Dashboard() {
                           {t.type === 'income' ? '+' : '-'}₴{t.amount.toLocaleString()}
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                        <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">
-                          ✏️
-                        </button>
-                        <button onClick={() => deleteTransaction(t.id)} style={{ ...s.actionBtn, color: '#993C1D' }} title="Видалити">
-                          🗑️
-                        </button>
-                      </div>
+                          <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">✏️</button>
+                          <button onClick={() => deleteTransaction(t.id)} style={{ ...s.actionBtn, color: '#993C1D' }} title="Видалити">🗑️</button>
+                        </div>
                       </div>
                     )
                   })}
@@ -366,7 +361,6 @@ export default function Dashboard() {
 
               {/* RIGHT COLUMN */}
               <div style={s.rightCol}>
-                {/* Bar chart */}
                 <div style={s.rightCard}>
                   <div style={s.sectionTitle}>Витрати по місяцях</div>
                   <div style={s.bars}>
@@ -379,7 +373,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Category breakdown */}
                 <div style={s.rightCard}>
                   <div style={s.sectionTitle}>Категорії витрат</div>
                   <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -398,7 +391,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* AI tip */}
                 <div style={s.aiCard}>
                   <div style={s.aiBadge}><i className="ti ti-robot" style={{ fontSize: 13 }} /> AI Порада</div>
                   <div style={s.aiText}>
@@ -407,9 +399,7 @@ export default function Dashboard() {
                       savings >= 20 ? `Непогано — ${savings}% заощаджень. Спробуй довести до 30%.` :
                       `Витрати ${stats.expense > stats.income ? 'перевищують' : 'майже рівні'} доходам. Перейди до AI Аналізу для детальних порад.`}
                   </div>
-                  <button onClick={() => setActiveTab('ai')} style={s.aiBtn}>
-                    Детальний аналіз →
-                  </button>
+                  <button onClick={() => setActiveTab('ai')} style={s.aiBtn}>Детальний аналіз →</button>
                 </div>
               </div>
             </div>
@@ -453,12 +443,8 @@ export default function Dashboard() {
                       {t.type === 'income' ? '+' : '-'}₴{t.amount.toLocaleString()}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">
-                      ✏️
-                    </button>
-                    <button onClick={() => deleteTransaction(t.id)} style={{ ...s.actionBtn, color: '#993C1D' }} title="Видалити">
-                      🗑️
-                    </button>
+                      <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">✏️</button>
+                      <button onClick={() => deleteTransaction(t.id)} style={{ ...s.actionBtn, color: '#993C1D' }} title="Видалити">🗑️</button>
                     </div>
                   </div>
                 )
@@ -472,10 +458,55 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* MESSAGES TAB */}
+        {activeTab === 'messages' && (
+          <div>
+            <div style={s.topBar}>
+              <div>
+                <div style={s.pageTitle}>Повідомлення</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                  {unreadCount > 0 ? `${unreadCount} непрочитаних` : 'Всі повідомлення прочитано'}
+                </div>
+              </div>
+            </div>
+
+            <div style={s.msgsCard}>
+              {messages.length === 0 && (
+                <div style={{ padding: 48, textAlign: 'center' }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>Повідомлень поки немає</div>
+                </div>
+              )}
+              {messages.map(m => (
+                <div
+                  key={m.id}
+                  style={{ ...s.msgRow, background: m.read ? 'transparent' : '#F5F4FE' }}
+                  onClick={() => !m.read && markAsRead(m.id)}
+                >
+                  <div style={s.msgLeft}>
+                    <div style={s.msgAvatar}>
+                      <i className="ti ti-shield-check" style={{ fontSize: 16, color: '#534AB7' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={s.msgFrom}>від {m.from?.name} · Адміністратор</div>
+                      <div style={s.msgText}>{m.text}</div>
+                      <div style={s.msgDate}>{new Date(m.createdAt).toLocaleDateString('uk', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                    </div>
+                  </div>
+                  {!m.read && (
+                    <div style={s.unreadPill}>Нове</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'charts' && <Charts transactions={allTransactions} categories={categories} />}
         {activeTab === 'ai' && <AIAnalysis />}
         {activeTab === 'admin' && <AdminPanel />}
       </div>
+
       {editTx && (
         <EditModal
           transaction={editTx}
@@ -484,37 +515,6 @@ export default function Dashboard() {
           onSuccess={loadData}
         />
       )}
-      {showMessages && (
-  <div style={s.overlay} onClick={e => e.target === e.currentTarget && setShowMessages(false)}>
-    <div style={{ ...s.editModal, width: 420 }}>
-      <div style={s.modalHeader}>
-        <div style={s.modalTitle}>🔔 Сповіщення</div>
-        <button onClick={() => setShowMessages(false)} style={s.closeBtn}>
-          <i className="ti ti-x" style={{ fontSize: 18 }} />
-        </button>
-      </div>
-      {messages.length === 0 && (
-        <p style={{ color: 'var(--color-text-tertiary)', fontSize: 13, textAlign: 'center', padding: 20 }}>
-          Немає повідомлень
-        </p>
-      )}
-      {messages.map(m => (
-        <div key={m.id} style={{ ...s.msgRow, background: m.read ? 'transparent' : '#F5F4FE' }}
-          onClick={async () => {
-            if (!m.read) {
-              await api.patch(`/messages/${m.id}/read`)
-              loadMessages()
-            }
-          }}>
-          <div style={s.msgFrom}>від {m.from?.name}</div>
-          <div style={s.msgText}>{m.text}</div>
-          <div style={s.msgDate}>{new Date(m.createdAt).toLocaleDateString('uk')}</div>
-          {!m.read && <span style={s.unreadDot} />}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
     </div>
   )
 }
@@ -523,18 +523,18 @@ const s = {
   app: { display: 'flex', minHeight: '100vh', background: 'var(--color-background-tertiary, #f4f5f7)' },
   sidebar: { width: 210, background: 'var(--color-background-primary)', borderRight: '0.5px solid var(--color-border-tertiary)', padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 2, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' },
   logoRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '4px 8px', marginBottom: 20 },
-  logoIcon: { width: 34, height: 34, borderRadius: 9, background: '#7F77DD', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18 },
   logoText: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' },
   navLabel: { fontSize: 10, color: 'var(--color-text-tertiary)', padding: '12px 12px 4px', textTransform: 'uppercase', letterSpacing: 0.6 },
   navItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, fontSize: 13, color: 'var(--color-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' },
   navActive: { background: '#EEEDFE', color: '#534AB7', fontWeight: 500 },
+  navBadge: { background: '#993C1D', color: '#fff', borderRadius: 20, padding: '1px 7px', fontSize: 10, fontWeight: 600 },
   userRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 8px 4px', marginTop: 'auto', borderTop: '0.5px solid var(--color-border-tertiary)' },
   avatar: { width: 34, height: 34, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, color: '#534AB7', flexShrink: 0 },
   userName: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
   userRole: { fontSize: 11, color: 'var(--color-text-tertiary)' },
   main: { flex: 1, padding: 28, overflowY: 'auto', minWidth: 0 },
   topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  pageTitle: { fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 8 },
+  pageTitle: { fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 },
   monthNav: { display: 'flex', alignItems: 'center', gap: 10 },
   monthBtn: { width: 28, height: 28, borderRadius: '50%', border: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-primary)', cursor: 'pointer', fontSize: 16, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   monthLabel: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', minWidth: 120, textAlign: 'center' },
@@ -568,7 +568,7 @@ const s = {
   txName: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
   txDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   txAmount: { fontSize: 14, fontWeight: 500, flexShrink: 0 },
-  delBtn: { background: 'none', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
+  actionBtn: { background: '#EEEDFE', border: 'none', color: '#534AB7', cursor: 'pointer', padding: '5px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', fontSize: 16 },
   rightCol: { display: 'flex', flexDirection: 'column', gap: 14 },
   rightCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: 16 },
   bars: { display: 'flex', alignItems: 'flex-end', gap: 6, height: 70, marginTop: 14 },
@@ -579,17 +579,13 @@ const s = {
   aiBadge: { display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EEEDFE', color: '#534AB7', fontSize: 11, padding: '4px 10px', borderRadius: 20, marginBottom: 10 },
   aiText: { fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 12 },
   aiBtn: { fontSize: 12, color: '#7F77DD', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 },
-  actionBtn: { background: '#EEEDFE', border: 'none', color: '#534AB7', cursor: 'pointer', padding: '5px 7px', borderRadius: 6, display: 'flex', alignItems: 'center' },
-  notifBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: '#F5F4FE', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#534AB7', width: '100%', position: 'relative' },
-  notifBadge: { background: '#993C1D', color: '#fff', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  editModal: { background: 'var(--color-background-primary)', borderRadius: 16, padding: 28, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' },
-  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', display: 'flex' },
-  msgRow: { padding: '12px 14px', borderRadius: 8, marginBottom: 8, cursor: 'pointer', position: 'relative', border: '0.5px solid var(--color-border-tertiary)' },
-  msgFrom: { fontSize: 11, color: '#534AB7', fontWeight: 500, marginBottom: 4 },
-  msgText: { fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.5 },
+  // Messages tab
+  msgsCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' },
+  msgRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '16px 20px', borderBottom: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer', transition: 'background 0.15s' },
+  msgLeft: { display: 'flex', gap: 12, flex: 1 },
+  msgAvatar: { width: 38, height: 38, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  msgFrom: { fontSize: 11, color: '#534AB7', fontWeight: 500, marginBottom: 5 },
+  msgText: { fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.6 },
   msgDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 6 },
-  unreadDot: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: '50%', background: '#7F77DD' },
+  unreadPill: { background: '#7F77DD', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600, flexShrink: 0, height: 'fit-content' },
 }
