@@ -6,6 +6,7 @@ import AIAnalysis from './AIAnalysis.jsx'
 import api from '../api/index.js'
 import EditModal from '../components/EditModal.jsx'
 import { sanitize } from '../utils/sanitize.js'
+import AdminPanel from './AdminPanel.jsx'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -41,8 +42,20 @@ export default function Dashboard() {
     date: now.toISOString().split('T')[0]
   })
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [messages, setMessages] = useState([])
+  const [showMessages, setShowMessages] = useState(false)
 
-  useEffect(() => { loadData() }, [])
+  const loadMessages = async () => {
+    try {
+      const res = await api.get('/messages')
+      setMessages(res.data)
+    } catch {}
+  }
+
+  useEffect(() => {
+    loadData()
+    loadMessages()
+  }, [])
   useEffect(() => { applyFilters() }, [allTransactions, search, filterMonth, filterYear])
 
   const loadData = async () => {
@@ -152,11 +165,12 @@ export default function Dashboard() {
   })
 
   const navItems = [
-    { id: 'dashboard', icon: 'ti-layout-dashboard', label: 'Дашборд' },
-    { id: 'transactions', icon: 'ti-arrows-exchange', label: 'Транзакції' },
-    { id: 'charts', icon: 'ti-chart-bar', label: 'Графіки' },
-    { id: 'ai', icon: 'ti-robot', label: 'AI Аналіз' },
-  ]
+  { id: 'dashboard', icon: 'ti-layout-dashboard', label: 'Дашборд' },
+  { id: 'transactions', icon: 'ti-arrows-exchange', label: 'Транзакції' },
+  { id: 'charts', icon: 'ti-chart-bar', label: 'Графіки' },
+  { id: 'ai', icon: 'ti-robot', label: 'AI Аналіз' },
+  ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : [])
+]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
   const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'VL'
@@ -178,6 +192,13 @@ export default function Dashboard() {
           </button>
         ))}
         <div style={s.navLabel}>Акаунт</div>
+        {messages.filter(m => !m.read).length > 0 && (
+          <button onClick={() => setShowMessages(true)} style={s.notifBtn}>
+            <i className="ti ti-bell" style={{ fontSize: 18 }} />
+            <span style={s.notifBadge}>{messages.filter(m => !m.read).length}</span>
+            Сповіщення
+          </button>
+        )}
         <button onClick={logout} style={s.navItem}>
           <i className="ti ti-logout" style={{ fontSize: 18 }} />
           Вийти
@@ -453,6 +474,7 @@ export default function Dashboard() {
 
         {activeTab === 'charts' && <Charts transactions={allTransactions} categories={categories} />}
         {activeTab === 'ai' && <AIAnalysis />}
+        {activeTab === 'admin' && <AdminPanel />}
       </div>
       {editTx && (
         <EditModal
@@ -462,6 +484,37 @@ export default function Dashboard() {
           onSuccess={loadData}
         />
       )}
+      {showMessages && (
+  <div style={s.overlay} onClick={e => e.target === e.currentTarget && setShowMessages(false)}>
+    <div style={{ ...s.editModal, width: 420 }}>
+      <div style={s.modalHeader}>
+        <div style={s.modalTitle}>🔔 Сповіщення</div>
+        <button onClick={() => setShowMessages(false)} style={s.closeBtn}>
+          <i className="ti ti-x" style={{ fontSize: 18 }} />
+        </button>
+      </div>
+      {messages.length === 0 && (
+        <p style={{ color: 'var(--color-text-tertiary)', fontSize: 13, textAlign: 'center', padding: 20 }}>
+          Немає повідомлень
+        </p>
+      )}
+      {messages.map(m => (
+        <div key={m.id} style={{ ...s.msgRow, background: m.read ? 'transparent' : '#F5F4FE' }}
+          onClick={async () => {
+            if (!m.read) {
+              await api.patch(`/messages/${m.id}/read`)
+              loadMessages()
+            }
+          }}>
+          <div style={s.msgFrom}>від {m.from?.name}</div>
+          <div style={s.msgText}>{m.text}</div>
+          <div style={s.msgDate}>{new Date(m.createdAt).toLocaleDateString('uk')}</div>
+          {!m.read && <span style={s.unreadDot} />}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
     </div>
   )
 }
@@ -527,4 +580,16 @@ const s = {
   aiText: { fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 12 },
   aiBtn: { fontSize: 12, color: '#7F77DD', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 },
   actionBtn: { background: '#EEEDFE', border: 'none', color: '#534AB7', cursor: 'pointer', padding: '5px 7px', borderRadius: 6, display: 'flex', alignItems: 'center' },
+  notifBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: '#F5F4FE', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#534AB7', width: '100%', position: 'relative' },
+  notifBadge: { background: '#993C1D', color: '#fff', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  editModal: { background: 'var(--color-background-primary)', borderRadius: 16, padding: 28, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' },
+  closeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', display: 'flex' },
+  msgRow: { padding: '12px 14px', borderRadius: 8, marginBottom: 8, cursor: 'pointer', position: 'relative', border: '0.5px solid var(--color-border-tertiary)' },
+  msgFrom: { fontSize: 11, color: '#534AB7', fontWeight: 500, marginBottom: 4 },
+  msgText: { fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.5 },
+  msgDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 6 },
+  unreadDot: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: '50%', background: '#7F77DD' },
 }

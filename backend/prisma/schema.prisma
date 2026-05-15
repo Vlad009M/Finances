@@ -13,14 +13,17 @@ enum Role {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  password     String
-  name         String
-  role         Role          @default(USER)
-  createdAt    DateTime      @default(now())
-  transactions Transaction[]
-  categories   Category[]
+  id               String        @id @default(uuid())
+  email            String        @unique
+  password         String
+  name             String
+  role             Role          @default(USER)
+  blocked          Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  transactions     Transaction[]
+  categories       Category[]
+  sentMessages     Message[]     @relation("SentMessages")
+  receivedMessages Message[]     @relation("ReceivedMessages")
 }
 
 model Category {
@@ -48,4 +51,15 @@ model Transaction {
   @@index([userId])
   @@index([date])
   @@index([userId, date])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  text      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  fromId    String
+  toId      String
+  from      User     @relation("SentMessages", fields: [fromId], references: [id])
+  to        User     @relation("ReceivedMessages", fields: [toId], references: [id])
 }

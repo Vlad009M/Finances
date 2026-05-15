@@ -26,6 +26,8 @@ app.use('/api/auth', require('./routes/auth'))
 app.use('/api/transactions', require('./routes/transactions'))
 app.use('/api/categories', require('./routes/categories'))
 app.use('/api/ai', require('./routes/ai'))
+app.use('/api/admin', require('./routes/admin'))
+app.use('/api/messages', require('./routes/messages'))
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Aperio API працює!' })
