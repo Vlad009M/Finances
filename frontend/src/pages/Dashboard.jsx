@@ -7,6 +7,7 @@ import api from '../api/index.js'
 import EditModal from '../components/EditModal.jsx'
 import { sanitize } from '../utils/sanitize.js'
 import AdminPanel from './AdminPanel.jsx'
+import ProfileModal from '../components/ProfileModal.jsx'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -43,6 +44,8 @@ export default function Dashboard() {
   })
   const [activeTab, setActiveTab] = useState('dashboard')
   const [messages, setMessages] = useState([])
+  const [showProfile, setShowProfile] = useState(false)
+  const [currentUser, setCurrentUser] = useState(user)
 
   const loadMessages = async () => {
     try {
@@ -179,7 +182,7 @@ export default function Dashboard() {
   ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
-  const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'VL'
+  const initials = currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'VL'
 
   return (
     <div style={s.app}>
@@ -205,13 +208,19 @@ export default function Dashboard() {
           <i className="ti ti-logout" style={{ fontSize: 18 }} />
           Вийти
         </button>
-        <div style={s.userRow}>
-          <div style={s.avatar}>{initials}</div>
-          <div>
-            <div style={s.userName}>{user.name}</div>
-            <div style={s.userRole}>Особистий</div>
-          </div>
+        <button onClick={() => setShowProfile(true)} style={s.userRowBtn}>
+  <div style={s.avatar}>
+    {currentUser.avatarUrl
+      ? <img src={currentUser.avatarUrl} alt="avatar" style={s.avatarImg} />
+      : initials
+    }
+  </div>
+  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+      <div style={s.userName}>{currentUser.name}</div>
+        <div style={s.userRole}>{currentUser.role === 'ROOT' ? 'Адміністратор' : 'Особистий'}</div>
         </div>
+        <i className="ti ti-settings" style={{ fontSize: 15, color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+      </button>
       </div>
 
       {/* MAIN */}
@@ -515,6 +524,14 @@ export default function Dashboard() {
           onSuccess={loadData}
         />
       )}
+      {showProfile && (
+      <ProfileModal
+        onClose={() => setShowProfile(false)}
+        onUpdate={(updated) => {
+          setCurrentUser(updated)
+        }}
+      />
+    )}
     </div>
   )
 }
@@ -579,7 +596,6 @@ const s = {
   aiBadge: { display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EEEDFE', color: '#534AB7', fontSize: 11, padding: '4px 10px', borderRadius: 20, marginBottom: 10 },
   aiText: { fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 12 },
   aiBtn: { fontSize: 12, color: '#7F77DD', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 },
-  // Messages tab
   msgsCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' },
   msgRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '16px 20px', borderBottom: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer', transition: 'background 0.15s' },
   msgLeft: { display: 'flex', gap: 12, flex: 1 },
@@ -588,4 +604,6 @@ const s = {
   msgText: { fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.6 },
   msgDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 6 },
   unreadPill: { background: '#7F77DD', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600, flexShrink: 0, height: 'fit-content' },
+  userRowBtn: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px 4px', marginTop: 'auto', borderTop: '0.5px solid var(--color-border-tertiary)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', borderRadius: 8,},
+  avatarImg: {width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'},
 }
