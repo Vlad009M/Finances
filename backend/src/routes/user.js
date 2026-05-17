@@ -1,11 +1,10 @@
 const express = require('express')
 const bcrypt = require('bcryptjs')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../prisma')
 const { z } = require('zod')
 const auth = require('../middleware/auth')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // PUT /api/user/profile — оновлення імені та аватарки
 router.put('/profile', auth, async (req, res) => {

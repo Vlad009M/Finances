@@ -1,9 +1,8 @@
 const express = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../prisma')
 const auth = require('../middleware/auth')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 router.get('/', auth, async (req, res) => {
   const categories = await prisma.category.findMany({

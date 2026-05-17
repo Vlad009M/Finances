@@ -1,10 +1,9 @@
 const express = require('express')
-const { PrismaClient } = require('@prisma/client')
+const prisma = require('../prisma')
 const auth = require('../middleware/auth')
 const requireRoot = require('../middleware/requireRoot')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
 // Всі користувачі
 router.get('/users', auth, requireRoot, async (req, res) => {
