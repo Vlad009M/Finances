@@ -8,6 +8,7 @@ import EditModal from '../components/EditModal.jsx'
 import { sanitize } from '../utils/sanitize.js'
 import AdminPanel from './AdminPanel.jsx'
 import ProfileModal from '../components/ProfileModal.jsx'
+import Import from './Import.jsx'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -178,7 +179,8 @@ export default function Dashboard() {
     { id: 'charts', icon: 'ti-chart-bar', label: 'Графіки' },
     { id: 'ai', icon: 'ti-robot', label: 'AI Аналіз' },
     { id: 'messages', icon: 'ti-bell', label: 'Повідомлення', badge: unreadCount },
-    ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : [])
+    ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : []),
+    { id: 'import', icon: 'ti-download', label: 'Імпорт' },
   ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
@@ -514,6 +516,7 @@ export default function Dashboard() {
         {activeTab === 'charts' && <Charts transactions={allTransactions} categories={categories} />}
         {activeTab === 'ai' && <AIAnalysis />}
         {activeTab === 'admin' && <AdminPanel />}
+        {activeTab === 'import' && (<Import categories={categories} onSuccess={loadData} /> )}
       </div>
 
       {editTx && (
