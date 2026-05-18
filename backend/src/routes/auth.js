@@ -18,7 +18,7 @@ const COOKIE_OPTIONS = {
 // Реєстрація
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body
+    const { email, password, name, captchaToken } = req.body
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Всі поля обов\'язкові' })
@@ -76,7 +76,7 @@ router.post('/register', async (req, res) => {
 // Вхід
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password, captchaToken } = req.body
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Введи email і пароль' })
@@ -125,6 +125,7 @@ if (!captchaToken) {
     res.cookie('token', token, COOKIE_OPTIONS)
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
   } catch (e) {
+    console.error("🚨 СПРАВЖНЯ ПОМИЛКА ЛОГІНУ:", e) // Додай цей рядок
     res.status(500).json({ error: 'Помилка сервера' })
   }
 })
