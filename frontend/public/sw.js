@@ -38,25 +38,19 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
+  // Пропускаємо не-http схеми (chrome-extension тощо)
+  if (!url.protocol.startsWith('http')) return
+
   // API запити — тільки мережа, без кешування
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(
-          JSON.stringify({ error: 'Немає з\'єднання з сервером' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        )
-      })
-    )
+    event.respondWith(fetch(request))
     return
   }
 
   // Навігація (HTML) — Network First, при помилці офлайн сторінка
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match(OFFLINE_URL)
-      })
+      fetch(request).catch(() => caches.match(OFFLINE_URL))
     )
     return
   }
@@ -71,7 +65,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
         }
         return response
-      })
+      }).catch(() => cached)
     })
   )
 })

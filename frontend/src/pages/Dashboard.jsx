@@ -151,32 +151,42 @@ export default function Dashboard() {
   useEffect(() => { applyFilters() }, [allTransactions, search, filterMonth, filterYear])
 
   const loadData = async () => {
-    try {
-      // 1. Просто отримуємо категорії з бази (миттєво)
-      const catsRes = await api.get('/categories')
-      
-      // Залишаємо твій захист від дублікатів
-      const seen = new Set()
-      const unique = catsRes.data.filter(c => {
-        if (seen.has(c.name)) return false
-        seen.add(c.name)
-        return true
-      })
-      setCategories(unique)
+  try {
+    let catsRes = await api.get('/categories')
 
-      // 2. Отримуємо транзакції (миттєво)
-      const txRes = await api.get('/transactions')
-      
-      // Оновлюємо стейт
-      setAllTransactions(txRes.data)
-      calcPrevStats(txRes.data)
-      
-      // Всі підрахунки (income, expense) ми звідси ПРИБРАЛИ, 
-      // бо твій useEffect сам викличе applyFilters() і миттєво оновить екран!
-    } catch {
-      toast.error('Помилка завантаження')
+    // Якщо новий акаунт — створюємо дефолтні категорії
+    if (catsRes.data.length === 0) {
+      for (const cat of CATEGORIES) {
+        await api.post('/categories', cat)
+      }
+      catsRes = await api.get('/categories')
+    } else {
+      // Оновлюємо іконки існуючих категорій
+      for (const cat of CATEGORIES) {
+        const existing = catsRes.data.find(c => c.name === cat.name)
+        if (existing) {
+          await api.put(`/categories/${existing.id}`, { icon: cat.icon, color: cat.color })
+        }
+      }
+      catsRes = await api.get('/categories')
     }
+
+    // Видаляємо дублікати
+    const seen = new Set()
+    const unique = catsRes.data.filter(c => {
+      if (seen.has(c.name)) return false
+      seen.add(c.name)
+      return true
+    })
+    setCategories(unique)
+
+    const txRes = await api.get('/transactions')
+    setAllTransactions(txRes.data)
+    calcPrevStats(txRes.data)
+  } catch {
+    toast.error('Помилка завантаження')
   }
+}
 
   const calcPrevStats = (txs) => {
     const prev = now.getMonth() === 0 ? 11 : now.getMonth() - 1
