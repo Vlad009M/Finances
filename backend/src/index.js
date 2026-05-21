@@ -28,6 +28,22 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }))
 app.use(cookieParser())
 
+const { doubleCsrf } = require('csrf-csrf')
+
+const { doubleCsrfProtection } = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'aperio-csrf-secret-key',
+  cookieName: 'csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
+  },
+  size: 64,
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+})
+
+app.use(doubleCsrfProtection)
+
 // --- Rate limiters ---
 
 // Авторизація: 10 спроб за 15 хвилин

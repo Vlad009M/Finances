@@ -2,6 +2,7 @@ const express = require('express')
 const prisma = require('../prisma')
 const { z } = require('zod')
 const auth = require('../middleware/auth')
+const DOMPurify = require('isomorphic-dompurify')
 
 const router = express.Router()
 
@@ -68,7 +69,7 @@ router.post('/', auth, async (req, res) => {
       data: {
         amount,
         type,
-        description: description ? description.replace(/<[^>]*>/g, '').trim() || null : null,
+        description: description ? DOMPurify.sanitize(description, { ALLOWED_TAGS: [] }).trim() || null : null,
         categoryId,
         userId: req.userId,
         date: date ? new Date(date) : new Date()
@@ -105,7 +106,7 @@ router.put('/:id', auth, async (req, res) => {
       data: {
         amount,
         type,
-        description: description ? description.replace(/<[^>]*>/g, '').trim() || null : null,
+        description: description ? DOMPurify.sanitize(description, { ALLOWED_TAGS: [] }).trim() || null : null,
         categoryId,
         date: date ? new Date(date) : existing.date
       },

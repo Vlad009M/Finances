@@ -33,20 +33,23 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// Fetch — стратегія Network First для API, Cache First для статики
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Пропускаємо не-http схеми (chrome-extension тощо)
+  // 1. ПРОПУСКАЄМО ВСІ POST, PUT, DELETE запити (браузер виконає їх стандартно)
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // 2. Пропускаємо не-http схеми (chrome-extension тощо)
   if (!url.protocol.startsWith('http')) return
 
-  // API запити — тільки мережа, без кешування
+  // 3. API запити — тільки мережа, без кешування
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(request))
     return
   }
-
   // Навігація (HTML) — Network First, при помилці офлайн сторінка
   if (request.mode === 'navigate') {
     event.respondWith(
