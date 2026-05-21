@@ -175,7 +175,6 @@ router.get('/google/callback', async (req, res) => {
   if (!code) return res.redirect(`${FRONTEND_URL}/login?error=no_code`)
 
   try {
-    // 2.1 Обмінюємо код на токен доступу Google
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -188,6 +187,7 @@ router.get('/google/callback', async (req, res) => {
       }),
     })
     const tokenData = await tokenResponse.json()
+    console.log('Token response:', JSON.stringify(tokenData))
     if (tokenData.error) throw new Error(tokenData.error_description)
 
     // 2.2 Отримуємо дані профілю користувача
