@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import Charts from './Charts.jsx'
 import AIAnalysis from './AIAnalysis.jsx'
 import api from '../api/index.js'
@@ -99,6 +100,7 @@ function SparkLine({ transactions }) {
 }
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const navigate = useNavigate()
   const now = new Date()
@@ -218,28 +220,72 @@ export default function Dashboard() {
     setStats({ income, expense, balance: income - expense })
   }
 
-  const addTransaction = async (e) => {
-    e.preventDefault()
-    if (!form.amount || !form.categoryId) { toast.error('Заповни всі поля'); return }
-    setLoading(true)
-    try {
-      await api.post('/transactions', {
-        ...form,
-        description: sanitize(form.description),
-        amount: parseFloat(form.amount)
-      })
+  // ДОДАНО: Мутація для миттєвого збереження транзакції
+  const addTxMutation = useMutation({
+    mutationFn: async (newTx) => {
+      const res = await api.post('/transactions', newTx);
+      return res.data;
+    },
+    // Цей блок виконується МИТТЄВО при кліку на кнопку
+    onMutate: async (newTx) => {
       setForm({ amount: '', type: 'expense', description: '', categoryId: '', date: now.toISOString().split('T')[0] })
       setShowForm(false)
       toast.success('Транзакцію додано!')
-      posthog.capture('transaction_added', {
-        type: form.type,
-        amount: parseFloat(form.amount),
-        category: categories.find(c => c.id === form.categoryId)?.name,
+
+      // Створюємо "фейкову" транзакцію для UI
+      const optimisticTx = {
+        ...newTx,
+        id: Math.random().toString(), // тимчасовий ID
+        category: categories.find(c => c.id === newTx.categoryId) || { name: 'Інше' }
+      };
+
+      // Миттєво оновлюємо локальний стан (без очікування бекенду!)
+      setAllTransactions(old => [optimisticTx, ...old])
+      setTransactions(old => {
+        // Застосовуємо фільтри, якщо треба
+        if (new Date(newTx.date).getMonth() === filterMonth) {
+          return [optimisticTx, ...old]
+        }
+        return old
       })
-      loadData()
-      syncGame()
-    } catch { toast.error('Помилка') }
-    setLoading(false)
+      
+      // Перераховуємо статистику миттєво
+      setStats(prev => {
+        const income = newTx.type === 'income' ? prev.income + newTx.amount : prev.income;
+        const expense = newTx.type === 'expense' ? prev.expense + newTx.amount : prev.expense;
+        return { income, expense, balance: income - expense };
+      })
+    },
+    onSuccess: () => {
+      // Коли бекенд відповів (через 5-10 сек), тихо оновлюємо дані у фоні
+      loadData();
+      syncGame();
+    },
+    onError: () => {
+      toast.error('Помилка синхронізації з сервером. Оновіть сторінку.')
+      loadData(); // Відкочуємо дані назад
+    }
+  })
+
+  const addTransaction = (e) => {
+    e.preventDefault()
+    if (!form.amount || !form.categoryId) { toast.error('Заповни всі поля'); return }
+    
+    // Формуємо дані
+    const txData = {
+      ...form,
+      description: sanitize(form.description),
+      amount: parseFloat(form.amount)
+    }
+
+    posthog.capture('transaction_added', {
+      type: form.type,
+      amount: txData.amount,
+      category: categories.find(c => c.id === form.categoryId)?.name,
+    })
+
+    // ЗАПУСКАЄМО МУТАЦІЮ
+    addTxMutation.mutate(txData);
   }
 
   const deleteTransaction = async (id) => {
@@ -264,6 +310,7 @@ export default function Dashboard() {
     localStorage.removeItem('user')
     posthog.reset()
     navigate('/login')
+    window.location.href = '/login'
   }
 
   const unreadCount = messages.filter(m => !m.read).length

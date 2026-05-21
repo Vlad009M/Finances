@@ -129,9 +129,17 @@ export default function Import({ categories, onSuccess }) {
     }
 
     setLoading(true)
+    
+    // ДОДАНО: Створюємо "зависле" сповіщення, яке показує процес
+    const loadingToast = toast.loading(`Імпортуємо ${toImport.length} транзакцій. Будь ласка, зачекайте...`)
+
     try {
       const res = await api.post('/import', { transactions: toImport })
-      toast.success(`Імпортовано ${res.data.imported} транзакцій! Пропущено ${res.data.duplicates} дублікатів.`)
+      
+      // Закриваємо "зависле" сповіщення і показуємо успіх
+      toast.dismiss(loadingToast)
+      toast.success(`Імпортовано ${res.data.imported} транзакцій! Пропущено ${res.data.duplicates} дублікатів.`, { duration: 5000 })
+      
       posthog.capture('import_completed', {
         imported: res.data.imported,
         duplicates: res.data.duplicates,
@@ -140,7 +148,8 @@ export default function Import({ categories, onSuccess }) {
       onSuccess()
       api.post('/game/sync').catch(() => {})
     } catch {
-      toast.error('Помилка імпорту')
+      toast.dismiss(loadingToast)
+      toast.error('Помилка імпорту. Спробуйте менший файл.')
     }
     setLoading(false)
   }

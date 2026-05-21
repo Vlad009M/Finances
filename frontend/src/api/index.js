@@ -6,11 +6,18 @@ const api = axios.create({
 })
 
 api.interceptors.response.use(
-  response => response,
-  error => {
+  (response) => response,
+  (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      const currentPath = window.location.pathname
+      // Редіректимо ТІЛЬКИ якщо запит був до /auth/me
+      // Інші 401 ігноруємо — це нормально для cross-domain staging
+      if (error.config?.url?.includes('/auth/me') && 
+          currentPath !== '/login' && 
+          currentPath !== '/register') {
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
