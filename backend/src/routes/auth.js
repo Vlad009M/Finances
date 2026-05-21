@@ -195,6 +195,10 @@ router.get('/google/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     })
     const userData = await userResponse.json()
+    console.log('User data email:', userData.email, 'name:', userData.name)
+
+let user = await prisma.user.findUnique({ where: { email: userData.email } })
+console.log('User found in DB:', !!user)
 
     // 2.3 Шукаємо або створюємо користувача в БД
     let user = await prisma.user.findUnique({ where: { email: userData.email } })
