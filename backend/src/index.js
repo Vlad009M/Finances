@@ -43,6 +43,9 @@ const { doubleCsrfProtection } = doubleCsrf({
 })
 
 app.use(doubleCsrfProtection)
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() })
+})
 
 // --- Rate limiters ---
 
