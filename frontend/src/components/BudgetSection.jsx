@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
 
-export default function BudgetSection({ categories, filterMonth, filterYear }) {
+export default function BudgetSection({ categories, categoriesMeta, filterMonth, filterYear }) {
   const [budgets, setBudgets] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ categoryId: '', amount: '' })

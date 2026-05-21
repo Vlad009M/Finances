@@ -24,13 +24,13 @@ export default function EditModal({ transaction, categories, onClose, onSuccess 
     }
     setLoading(true)
     try {
-      await api.put(`/transactions/${transaction.id}`, form)
+      const res = await api.put(`/transactions/${transaction.id}`, form)
       toast.success('Транзакцію оновлено!')
       posthog.capture('transaction_edited', {
         type: form.type,
         amount: parseFloat(form.amount),
       })
-      onSuccess()
+      onSuccess(res.data)
       onClose()
     } catch {
       toast.error('Помилка оновлення')

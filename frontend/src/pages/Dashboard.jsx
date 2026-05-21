@@ -148,42 +148,32 @@ export default function Dashboard() {
 }
 
   useEffect(() => {
-    loadData()
-    loadMessages()
-  }, [])
+  Promise.all([loadData(), loadMessages()])
+}, [])
   useEffect(() => { applyFilters() }, [allTransactions, search, filterMonth, filterYear])
 
   const loadData = async () => {
   try {
-    let catsRes = await api.get('/categories')
+    const [catsRes, txRes] = await Promise.all([
+      api.get('/categories'),
+      api.get('/transactions')
+    ])
 
-    // Якщо новий акаунт — створюємо дефолтні категорії
-    if (catsRes.data.length === 0) {
-      for (const cat of CATEGORIES) {
-        await api.post('/categories', cat)
-      }
-      catsRes = await api.get('/categories')
-    } else {
-      // Оновлюємо іконки існуючих категорій
-      for (const cat of CATEGORIES) {
-        const existing = catsRes.data.find(c => c.name === cat.name)
-        if (existing) {
-          await api.put(`/categories/${existing.id}`, { icon: cat.icon, color: cat.color })
-        }
-      }
-      catsRes = await api.get('/categories')
+    let cats = catsRes.data
+
+    if (cats.length === 0) {
+      await Promise.all(CATEGORIES.map(cat => api.post('/categories', cat)))
+      const newCats = await api.get('/categories')
+      cats = newCats.data
     }
 
-    // Видаляємо дублікати
     const seen = new Set()
-    const unique = catsRes.data.filter(c => {
+    const unique = cats.filter(c => {
       if (seen.has(c.name)) return false
       seen.add(c.name)
       return true
     })
     setCategories(unique)
-
-    const txRes = await api.get('/transactions')
     setAllTransactions(txRes.data)
     calcPrevStats(txRes.data)
   } catch {
@@ -236,6 +226,7 @@ export default function Dashboard() {
       const optimisticTx = {
         ...newTx,
         id: Math.random().toString(), // тимчасовий ID
+        _optimistic: true,
         category: categories.find(c => c.id === newTx.categoryId) || { name: 'Інше' }
       };
 
@@ -289,14 +280,19 @@ export default function Dashboard() {
   }
 
   const deleteTransaction = async (id) => {
-    try {
-      await api.delete(`/transactions/${id}`)
-      toast.success('Видалено')
-      posthog.capture('transaction_deleted')
-      loadData()
-      syncGame()
-    } catch { toast.error('Помилка') }
+  // Миттєво видаляємо з UI
+  setAllTransactions(old => old.filter(t => t.id !== id))
+  setTransactions(old => old.filter(t => t.id !== id))
+  try {
+    await api.delete(`/transactions/${id}`)
+    toast.success('Видалено')
+    posthog.capture('transaction_deleted')
+    syncGame()
+  } catch {
+    toast.error('Помилка видалення')
+    loadData() // відкочуємо якщо помилка
   }
+}
 
   const markAsRead = async (id) => {
     try {
@@ -568,10 +564,19 @@ export default function Dashboard() {
                             {t.type === 'income' ? '+' : '-'}₴{t.amount.toLocaleString()}
                           </div>
                           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                            <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">
+                            <button 
+                                onClick={() => !t._optimistic && setEditTx(t)} 
+                                style={{ ...s.actionBtn, opacity: t._optimistic ? 0.3 : 1 }} 
+                                title={t._optimistic ? 'Збереження...' : 'Редагувати'}
+                                disabled={t._optimistic}>
                               <img src="/icons/edit.svg" width={28} height={28} alt="edit" />
                             </button>
-                            <button onClick={() => deleteTransaction(t.id)} style={s.actionBtn} title="Видалити">
+                            <button 
+                                  onClick={() => !t._optimistic && deleteTransaction(t.id)} 
+                                  style={{ ...s.actionBtn, opacity: t._optimistic ? 0.3 : 1 }} 
+                                  title={t._optimistic ? 'Збереження...' : 'Видалити'}
+                                  disabled={t._optimistic}
+                                >
                               <img src="/icons/delete.svg" width={28} height={28} alt="delete" />
                             </button>
                           </div>
@@ -732,10 +737,20 @@ export default function Dashboard() {
                       {t.type === 'income' ? '+' : '-'}₴{t.amount.toLocaleString()}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                      <button onClick={() => setEditTx(t)} style={s.actionBtn} title="Редагувати">
+                      <button 
+                          onClick={() => !t._optimistic && setEditTx(t)} 
+                          style={{ ...s.actionBtn, opacity: t._optimistic ? 0.3 : 1 }} 
+                          title={t._optimistic ? 'Збереження...' : 'Редагувати'}
+                          disabled={t._optimistic}
+                        >
                         <img src="/icons/edit.svg" width={28} height={28} alt="edit" />
                       </button>
-                      <button onClick={() => deleteTransaction(t.id)} style={s.actionBtn} title="Видалити">
+                      <button 
+                            onClick={() => !t._optimistic && deleteTransaction(t.id)} 
+                            style={{ ...s.actionBtn, opacity: t._optimistic ? 0.3 : 1 }} 
+                            title={t._optimistic ? 'Збереження...' : 'Видалити'}
+                            disabled={t._optimistic}
+                          >
                         <img src="/icons/delete.svg" width={28} height={28} alt="delete" />
                       </button>
                     </div>
@@ -883,11 +898,14 @@ export default function Dashboard() {
 
       {editTx && (
         <EditModal
-          transaction={editTx}
-          categories={categories}
-          onClose={() => setEditTx(null)}
-          onSuccess={loadData}
-        />
+        transaction={editTx}
+        categories={categories}
+        onClose={() => setEditTx(null)}
+        onSuccess={(updated) => {
+          setAllTransactions(old => old.map(t => t.id === updated.id ? updated : t))
+          setEditTx(null)
+        }}
+      />
       )}
       {showBulkDelete && (
         <BulkDeleteModal
