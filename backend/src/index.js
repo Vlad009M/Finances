@@ -36,8 +36,12 @@ app.use(cookieParser())
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
   const origin = req.headers.origin || req.headers.referer || ''
-  const allowed = process.env.FRONTEND_URL || 'http://localhost:5173'
-  if (origin.startsWith(allowed)) return next()
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://aperio.pp.ua',
+    'https://www.aperio.pp.ua'
+  ]
+  if (allowedOrigins.some(allowed => origin.startsWith(allowed))) return next()
   return res.status(403).json({ error: 'CSRF перевірка не пройдена' })
 })
 
