@@ -148,9 +148,8 @@ export default function Dashboard() {
 }
 
   useEffect(() => {
-    loadData()
-    loadMessages()
-  }, [])
+  Promise.all([loadData(), loadMessages()])
+}, [])
   useEffect(() => { applyFilters() }, [allTransactions, search, filterMonth, filterYear])
 
   const loadData = async () => {
@@ -899,11 +898,14 @@ export default function Dashboard() {
 
       {editTx && (
         <EditModal
-          transaction={editTx}
-          categories={categories}
-          onClose={() => setEditTx(null)}
-          onSuccess={loadData}
-        />
+        transaction={editTx}
+        categories={categories}
+        onClose={() => setEditTx(null)}
+        onSuccess={(updated) => {
+          setAllTransactions(old => old.map(t => t.id === updated.id ? updated : t))
+          setEditTx(null)
+        }}
+      />
       )}
       {showBulkDelete && (
         <BulkDeleteModal

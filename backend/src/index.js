@@ -108,6 +108,16 @@ app.get('/health', (req, res) => {
 Sentry.setupExpressErrorHandler(app)
 
 const PORT = process.env.PORT || 3001
+
+// Само-пінг щоб не засинав (кожні 14 хвилин)
+if (process.env.NODE_ENV === 'production') {
+  setInterval(async () => {
+    try {
+      await fetch(`${process.env.RENDER_EXTERNAL_URL || 'https://api.aperio.pp.ua'}/health`)
+    } catch {}
+  }, 14 * 60 * 1000)
+}
+
 app.listen(PORT, () => {
   console.log(`Сервер запущено на порту ${PORT}`)
 })
