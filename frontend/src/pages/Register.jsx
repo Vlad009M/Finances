@@ -40,7 +40,7 @@ export default function Register() {
 const handleGoogleLogin = () => {
   posthog.capture('user_registered', { method: 'google' })
     // Відправляємо на наш бекенд, а він вже перенаправить на Google
-    window.location.href = 'http://localhost:3001/api/auth/google'
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/google`
   }
 
   return (

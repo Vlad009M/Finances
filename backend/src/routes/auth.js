@@ -7,12 +7,14 @@ const prisma = require('../prisma')
 const router = express.Router()
 
 const isProd = process.env.NODE_ENV === 'production'
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProd,
-  sameSite: isProd ? 'strict' : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 днів
+  sameSite: isProd ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  domain: isProd ? '.aperio.pp.ua' : undefined,
 }
 
 // Реєстрація
@@ -125,7 +127,6 @@ if (!verifyData.success) {
     res.cookie('token', token, COOKIE_OPTIONS)
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
   } catch (e) {
-    console.error("🚨 СПРАВЖНЯ ПОМИЛКА ЛОГІНУ:", e) // Додай цей рядок
     res.status(500).json({ error: 'Помилка сервера' })
   }
 })
@@ -170,7 +171,7 @@ router.get('/google', (req, res) => {
 // 2. Колбек (Google повертає сюди код)
 router.get('/google/callback', async (req, res) => {
   const { code } = req.query
-  if (!code) return res.redirect('http://localhost:5173/login?error=no_code')
+  if (!code) return res.redirect(`${FRONTEND_URL}/login?error=no_code`)
 
   try {
     // 2.1 Обмінюємо код на токен доступу Google
@@ -212,7 +213,7 @@ router.get('/google/callback', async (req, res) => {
     }
 
     if (user.blocked) {
-      return res.redirect('http://localhost:5173/login?error=blocked')
+      return res.redirect(`${FRONTEND_URL}/login?error=blocked`)
     }
 
     // 2.4 Генеруємо наш внутрішній JWT токен
@@ -224,11 +225,11 @@ router.get('/google/callback', async (req, res) => {
 
     // 2.5 Ставимо куку і перекидаємо на дашборд
     res.cookie('token', token, COOKIE_OPTIONS)
-    res.redirect('http://localhost:5173/dashboard')
+    res.redirect(`${FRONTEND_URL}/dashboard`)
 
   } catch (e) {
     console.error('Помилка Google OAuth:', e)
-    res.redirect('http://localhost:5173/login?error=oauth_failed')
+    res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`)
   }
 })
 
