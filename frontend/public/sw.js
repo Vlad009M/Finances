@@ -46,7 +46,14 @@ self.addEventListener('fetch', (event) => {
   if (!url.protocol.startsWith('http')) return
 
   // 3. API запити — тільки мережа, без кешування
-  if (url.pathname.startsWith('/api/') || url.hostname.includes('onrender.com') || url.hostname.includes('aperio.pp.ua')) {
+  const hostname = url.hostname
+const apiHosts = ['onrender.com', 'aperio.pp.ua']
+const isApiHost = apiHosts.some(
+  allowedHost =>
+    hostname === allowedHost || hostname.endsWith(`.${allowedHost}`)
+)
+
+if (url.pathname.startsWith('/api/') || isApiHost) {
     event.respondWith(fetch(request))
     return
   }
