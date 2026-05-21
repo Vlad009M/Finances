@@ -310,6 +310,7 @@ export default function Dashboard() {
     localStorage.removeItem('user')
     posthog.reset()
     navigate('/login')
+    window.location.href = '/login'
   }
 
   const unreadCount = messages.filter(m => !m.read).length
