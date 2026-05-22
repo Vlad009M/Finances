@@ -394,7 +394,9 @@ const handleResendCode = async () => {
     { id: 'messages', icon: 'ti-bell', label: 'Повідомлення', badge: unreadCount },
     ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : []),
     { id: 'import', icon: 'ti-download', label: 'Імпорт' },
-    { id: 'game', icon: 'ti-sword', label: 'Герой' }
+    { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
+    { id: 'game', icon: 'ti-sword', label: 'Герой' },
+    { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
   ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
@@ -432,17 +434,14 @@ const handleResendCode = async () => {
         <div style={s.logoRow}>
           <img src="/Aperio.png" alt="Aperio" style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover' }} />
           <span style={s.logoText}>Aperio</span>
-          <button onClick={() => setShowFeedback(true)} style={s.betaBadge}>
-            <span style={s.betaDot} />
-            BETA
-          </button>
           <div style={{ marginLeft: 'auto' }}>
             <ThemeToggle />
           </div>
         </div>
         <div style={s.navLabel}>Меню</div>
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setActiveTab(item.id)}
+            <button key={item.id}
+              onClick={() => item.id === '_feedback' ? setShowFeedback(true) : setActiveTab(item.id)}
             style={{ ...s.navItem, ...(activeTab === item.id ? s.navActive : {}) }}>
             <i className={`ti ${item.icon}`} style={{ fontSize: 18 }} />
             <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
@@ -952,7 +951,10 @@ const handleResendCode = async () => {
         ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : []),
       ].map(item => (
         <button key={item.id}
-          onClick={() => { setActiveTab(item.id); setShowMobileMenu(false) }}
+          onClick={() => {
+            if (item.id === '_feedback') { setShowFeedback(true); setShowMobileMenu(false) }
+            else { setActiveTab(item.id); setShowMobileMenu(false) }
+          }}
           style={{ ...s.moreDrawerItem, ...(activeTab === item.id ? s.moreDrawerActive : {}) }}>
           <i className={`ti ${item.icon}`} style={{ fontSize: 18 }} />
           <span style={{ flex: 1 }}>{item.label}</span>
