@@ -2,26 +2,23 @@ const { Resend } = require('resend')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const sendVerificationEmail = async (email, name, token) => {
-const backendUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL.replace('https://dev.', 'https://api-dev.').replace('https://www.', 'https://api.').replace('https://aperio.pp.ua', 'https://api.aperio.pp.ua')
-const verifyUrl = `${backendUrl}/api/auth/verify-email?token=${token}`
-  
+const sendVerificationEmail = async (email, name, code) => {
   await resend.emails.send({
     from: 'Aperio <noreply@aperio.pp.ua>',
     to: email,
-    subject: 'Підтвердь свою пошту — Aperio',
+    subject: 'Твій код підтвердження — Aperio',
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <img src="https://aperio.pp.ua/Aperio.png" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
         <h1 style="font-size: 22px; color: #1a1a2e; margin-bottom: 8px;">Привіт, ${name}!</h1>
         <p style="color: #555; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
-          Дякуємо за реєстрацію в Aperio. Натисни кнопку нижче щоб підтвердити свою email адресу.
+          Твій код підтвердження email для Aperio:
         </p>
-        <a href="${verifyUrl}" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #7F77DD, #534AB7); color: #fff; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 500;">
-          Підтвердити email
-        </a>
-        <p style="color: #888; font-size: 13px; margin-top: 24px;">
-          Посилання дійсне 24 години. Якщо ти не реєструвався — просто ігноруй цей лист.
+        <div style="background: #f4f5f7; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #534AB7;">${code}</span>
+        </div>
+        <p style="color: #888; font-size: 13px;">
+          Введи цей код на сайті щоб підтвердити свою пошту. Код дійсний 24 години.
         </p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
         <p style="color: #aaa; font-size: 12px;">© 2026 Aperio</p>
