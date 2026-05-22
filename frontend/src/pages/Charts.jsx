@@ -52,14 +52,18 @@ function BarChartSVG({ data, height = 200 }) {
   const ref = useRef(null)
   const [width, setWidth] = useState(400)
   useEffect(() => {
-    if (!ref.current) return
-    const ob = new ResizeObserver(e => setWidth(e[0].contentRect.width))
-    ob.observe(ref.current)
-    setWidth(ref.current.offsetWidth)
-    return () => ob.disconnect()
+  if (!ref.current) return
+  const ob = new ResizeObserver(e => {
+    const w = e[0].contentRect.width
+    setWidth(w > 0 ? w : 300)
+  })
+  ob.observe(ref.current)
+  const initialW = ref.current.getBoundingClientRect().width
+  setWidth(initialW > 0 ? initialW : 300)
+  return () => ob.disconnect()
   }, [])
 
-  const padL = 50, padR = 16, padT = 16, padB = 32
+  const padL = 44, padR = 12, padT = 16, padB = 36
   const W = width - padL - padR
   const H = height - padT - padB
   const keys = ['income', 'expense']
@@ -133,10 +137,14 @@ function LineChartSVG({ data, height = 200 }) {
   const [width, setWidth] = useState(400)
   useEffect(() => {
     if (!ref.current) return
-    const ob = new ResizeObserver(e => setWidth(e[0].contentRect.width))
-    ob.observe(ref.current)
-    setWidth(ref.current.offsetWidth)
-    return () => ob.disconnect()
+    const ob = new ResizeObserver(e => {
+  const w = e[0].contentRect.width
+  setWidth(w > 0 ? w : 300)
+})
+ob.observe(ref.current)
+const initialW = ref.current.getBoundingClientRect().width
+setWidth(initialW > 0 ? initialW : 300)
+return () => ob.disconnect()
   }, [])
 
   const padL = 50, padR = 16, padT = 16, padB = 32

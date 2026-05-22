@@ -923,8 +923,8 @@ const handleResendCode = async () => {
           ...s.bottomNavItem,
           ...(activeTab === item.id || (item.id === '_more' && showMobileMenu) ? s.bottomNavActive : {}),
         }}>
-        <i className={`ti ${item.icon}`} style={{ fontSize: 20 }} />
-        <span style={{ fontSize: 9, marginTop: 1 }}>{item.label}</span>
+        <i className={`ti ${item.icon}`} style={{ fontSize: 22 }} />
+        <span style={{ fontSize: 11, marginTop: 2, fontWeight: activeTab === item.id ? 500 : 400 }}>{item.label}</span>
         {item.id === '_more' && unreadCount > 0 && (
           <span style={{ position: 'absolute', top: 6, right: 10, background: '#993C1D', color: '#fff', borderRadius: 20, padding: '1px 5px', fontSize: 8, fontWeight: 600 }}>{unreadCount}</span>
         )}
@@ -1078,7 +1078,7 @@ const s = {
   mobileTopBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: 'var(--color-background-primary)', borderBottom: '0.5px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 },
   mobileAddBtn: { width: 36, height: 36, borderRadius: 9, background: '#7F77DD', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   bottomNav: { position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--color-background-primary)', borderTop: '0.5px solid var(--color-border-tertiary)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom, 0px)' },
-  bottomNavItem: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', position: 'relative', gap: 2 },
+  bottomNavItem: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 4px 10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', position: 'relative', gap: 3, minHeight: 56 },
   bottomNavActive: { color: '#534AB7' },
   mobileMoreDrawer: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 99, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' },
   mobileMoreContent: { background: 'var(--color-background-primary)', borderRadius: '16px 16px 0 0', padding: '20px 16px 36px' },
