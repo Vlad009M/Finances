@@ -350,7 +350,8 @@ router.post('/sync', auth, async (req, res) => {
     await recalcGame(req.userId)
     res.json({ ok: true })
   } catch (e) {
-    res.status(500).json({ error: 'Помилка синхронізації' })
+    console.error('SYNC ERROR:', e.message, e.stack)
+    res.status(500).json({ error: e.message })
   }
 })
 

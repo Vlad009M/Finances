@@ -100,6 +100,7 @@ app.use('/api/user', require('./routes/user'))
 app.use('/api/import', require('./routes/import'))
 app.use('/api/game', require('./routes/game'))
 app.use('/api/budgets', require('./routes/budgets'))
+app.use('/api/feedback', require('./routes/feedback'))
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Aperio API працює!' })

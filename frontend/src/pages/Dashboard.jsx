@@ -17,6 +17,7 @@ import BudgetSection from '../components/BudgetSection.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useIsMobile } from '../hooks/useResponsive.js'
 import posthog from 'posthog-js'
+import FeedbackModal from '../components/FeedbackModal.jsx'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -132,6 +133,7 @@ export default function Dashboard() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [verifyError, setVerifyError] = useState('')
   const [verifySuccess, setVerifySuccess] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
 
 const handleVerifyEmail = async () => {
   if (!verifyCode || verifyCode.length !== 6) {
@@ -392,7 +394,9 @@ const handleResendCode = async () => {
     { id: 'messages', icon: 'ti-bell', label: 'Повідомлення', badge: unreadCount },
     ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : []),
     { id: 'import', icon: 'ti-download', label: 'Імпорт' },
-    { id: 'game', icon: 'ti-sword', label: 'Герой' }
+    { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
+    { id: 'game', icon: 'ti-sword', label: 'Герой' },
+    { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
   ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)
@@ -430,11 +434,14 @@ const handleResendCode = async () => {
         <div style={s.logoRow}>
           <img src="/Aperio.png" alt="Aperio" style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover' }} />
           <span style={s.logoText}>Aperio</span>
-          <ThemeToggle />
+          <div style={{ marginLeft: 'auto' }}>
+            <ThemeToggle />
+          </div>
         </div>
         <div style={s.navLabel}>Меню</div>
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setActiveTab(item.id)}
+            <button key={item.id}
+              onClick={() => item.id === '_feedback' ? setShowFeedback(true) : setActiveTab(item.id)}
             style={{ ...s.navItem, ...(activeTab === item.id ? s.navActive : {}) }}>
             <i className={`ti ${item.icon}`} style={{ fontSize: 18 }} />
             <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
@@ -944,7 +951,10 @@ const handleResendCode = async () => {
         ...(user.role === 'ROOT' ? [{ id: 'admin', icon: 'ti-shield-check', label: 'Адмін' }] : []),
       ].map(item => (
         <button key={item.id}
-          onClick={() => { setActiveTab(item.id); setShowMobileMenu(false) }}
+          onClick={() => {
+            if (item.id === '_feedback') { setShowFeedback(true); setShowMobileMenu(false) }
+            else { setActiveTab(item.id); setShowMobileMenu(false) }
+          }}
           style={{ ...s.moreDrawerItem, ...(activeTab === item.id ? s.moreDrawerActive : {}) }}>
           <i className={`ti ${item.icon}`} style={{ fontSize: 18 }} />
           <span style={{ flex: 1 }}>{item.label}</span>
@@ -993,6 +1003,9 @@ const handleResendCode = async () => {
         }}
       />
     )}
+
+    {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+      
     </div>
   )
 }
@@ -1088,4 +1101,6 @@ const s = {
   footerText: { fontSize: 12, color: 'var(--color-text-tertiary)' },
   footerDot: { fontSize: 12, color: 'var(--color-border-tertiary)' },
   footerLink: { fontSize: 12, color: 'var(--color-text-tertiary)', textDecoration: 'none' },
+  betaBadge: { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#EEEDFE', color: '#534AB7', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '3px 8px', borderRadius: 20, border: 'none', cursor: 'pointer' },
+  betaDot: { width: 6, height: 6, borderRadius: '50%', background: '#7F77DD', display: 'inline-block', boxShadow: '0 0 0 2px rgba(127,119,221,0.3)' },
 }

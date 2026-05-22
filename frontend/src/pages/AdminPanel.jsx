@@ -4,15 +4,31 @@ import toast from 'react-hot-toast'
 import api from '../api/index.js'
 import { useIsMobile } from '../hooks/useResponsive.js'
 
+const TABS = [
+  { id: 'users', label: 'Користувачі', icon: 'ti-users' },
+  { id: 'feedback', label: 'Відгуки', icon: 'ti-message-circle' },
+]
+
+const FEEDBACK_TYPE = {
+  bug:   { label: 'Баг',  emoji: '🐛', bg: '#FAECE7', color: '#993C1D' },
+  idea:  { label: 'Ідея', emoji: '💡', bg: '#FFF8E1', color: '#985A00' },
+  other: { label: 'Інше', emoji: '❓', bg: '#F5F4FE', color: '#534AB7' },
+}
+
 export default function AdminPanel() {
+  const [activeTab, setActiveTab] = useState('users')
   const [stats, setStats] = useState(null)
   const [users, setUsers] = useState([])
+  const [feedback, setFeedback] = useState([])
   const [loading, setLoading] = useState(true)
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
   const [msgModal, setMsgModal] = useState(null)
   const [msg, setMsg] = useState('')
   const [sending, setSending] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => { loadData() }, [])
+  useEffect(() => { if (activeTab === 'feedback') loadFeedback() }, [activeTab])
 
   const loadData = async () => {
     try {
@@ -26,6 +42,17 @@ export default function AdminPanel() {
       toast.error('Помилка завантаження')
     }
     setLoading(false)
+  }
+
+  const loadFeedback = async () => {
+    setFeedbackLoading(true)
+    try {
+      const res = await api.get('/feedback')
+      setFeedback(res.data)
+    } catch {
+      toast.error('Помилка завантаження відгуків')
+    }
+    setFeedbackLoading(false)
   }
 
   const changeRole = async (id, currentRole) => {
@@ -76,14 +103,11 @@ export default function AdminPanel() {
     setSending(false)
   }
 
-  // Escape key
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') setMsgModal(null) }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
-
-  const isMobile = useIsMobile()
 
   if (loading) return <div style={s.loading}>Завантаження...</div>
 
@@ -117,67 +141,127 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* Список користувачів */}
-      <div style={s.card}>
-        <div style={s.cardHeader}>
-          <div style={s.sectionTitle}>Користувачі системи</div>
-          <div style={s.userCount}>{users.length} користувачів</div>
-        </div>
-
-        {users.map(u => (
-          <div key={u.id} style={{ ...s.userRow, opacity: u.blocked ? 0.55 : 1 }}>
-            <div style={{ ...s.avatar, background: u.role === 'ROOT' ? '#EEEDFE' : '#f5f5f5', color: u.role === 'ROOT' ? '#534AB7' : '#888' }}>
-              {u.name[0].toUpperCase()}
-            </div>
-
-            <div style={s.userInfo}>
-              <div style={s.userName}>
-                {u.name}
-                {u.blocked && (
-                  <span style={s.blockedTag}>
-                    <i className="ti ti-lock" style={{ fontSize: 10 }} /> заблоковано
-                  </span>
-                )}
-              </div>
-              <div style={s.userMeta}>
-                {u.email} · {u._count.transactions} транзакцій · з {new Date(u.createdAt).toLocaleDateString('uk')}
-              </div>
-            </div>
-
-            <span style={{ ...s.roleBadge, ...(u.role === 'ROOT' ? s.rootRole : s.userRole) }}>
-              {u.role}
-            </span>
-
-            {u.role !== 'ROOT' && (
-              <div style={s.actions}>
-                <button onClick={() => changeRole(u.id, u.role)} style={s.actionBtn} title="Змінити роль">
-                  <i className="ti ti-shield" style={{ fontSize: 14 }} />
-                  <span>→ ROOT</span>
-                </button>
-
-                <button
-                  onClick={() => toggleBlock(u.id, u.blocked, u.name)}
-                  style={{ ...s.actionBtn, ...(u.blocked ? s.unblockBtn : s.blockBtn) }}>
-                  <i className={`ti ${u.blocked ? 'ti-lock-open' : 'ti-lock'}`} style={{ fontSize: 14 }} />
-                  <span>{u.blocked ? 'Розблокувати' : 'Заблокувати'}</span>
-                </button>
-
-                <button onClick={() => { setMsgModal(u); setMsg('') }} style={{ ...s.actionBtn, ...s.msgBtn }}>
-                  <i className="ti ti-message" style={{ fontSize: 14 }} />
-                  <span>Повідомлення</span>
-                </button>
-
-                <button onClick={() => deleteUser(u.id, u.name)} style={{ ...s.actionBtn, ...s.deleteBtn }}>
-                  <i className="ti ti-trash" style={{ fontSize: 14 }} />
-                  <span>Видалити</span>
-                </button>
-              </div>
-            )}
-          </div>
+      {/* Вкладки */}
+      <div style={s.tabs}>
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            style={{ ...s.tab, ...(activeTab === tab.id ? s.tabActive : {}) }}>
+            <i className={`ti ${tab.icon}`} style={{ fontSize: 15 }} />
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Модалка повідомлення — через portal щоб завжди бути поверх всього */}
+      {/* Вкладка користувачів */}
+      {activeTab === 'users' && (
+        <div style={s.card}>
+          <div style={s.cardHeader}>
+            <div style={s.sectionTitle}>Користувачі системи</div>
+            <div style={s.userCount}>{users.length} користувачів</div>
+          </div>
+
+          {users.map(u => (
+            <div key={u.id} style={{ ...s.userRow, opacity: u.blocked ? 0.55 : 1 }}>
+              <div style={{ ...s.avatar, background: u.role === 'ROOT' ? '#EEEDFE' : '#f5f5f5', color: u.role === 'ROOT' ? '#534AB7' : '#888' }}>
+                {u.name[0].toUpperCase()}
+              </div>
+
+              <div style={s.userInfo}>
+                <div style={s.userName}>
+                  {u.name}
+                  {u.blocked && (
+                    <span style={s.blockedTag}>
+                      <i className="ti ti-lock" style={{ fontSize: 10 }} /> заблоковано
+                    </span>
+                  )}
+                </div>
+                <div style={s.userMeta}>
+                  {u.email} · {u._count.transactions} транзакцій · з {new Date(u.createdAt).toLocaleDateString('uk')}
+                </div>
+              </div>
+
+              <span style={{ ...s.roleBadge, ...(u.role === 'ROOT' ? s.rootRole : s.userRoleBadge) }}>
+                {u.role}
+              </span>
+
+              {u.role !== 'ROOT' && (
+                <div style={s.actions}>
+                  <button onClick={() => changeRole(u.id, u.role)} style={s.actionBtn} title="Змінити роль">
+                    <i className="ti ti-shield" style={{ fontSize: 14 }} />
+                    <span>→ ROOT</span>
+                  </button>
+                  <button onClick={() => toggleBlock(u.id, u.blocked, u.name)}
+                    style={{ ...s.actionBtn, ...(u.blocked ? s.unblockBtn : s.blockBtn) }}>
+                    <i className={`ti ${u.blocked ? 'ti-lock-open' : 'ti-lock'}`} style={{ fontSize: 14 }} />
+                    <span>{u.blocked ? 'Розблокувати' : 'Заблокувати'}</span>
+                  </button>
+                  <button onClick={() => { setMsgModal(u); setMsg('') }} style={{ ...s.actionBtn, ...s.msgBtn }}>
+                    <i className="ti ti-message" style={{ fontSize: 14 }} />
+                    <span>Повідомлення</span>
+                  </button>
+                  <button onClick={() => deleteUser(u.id, u.name)} style={{ ...s.actionBtn, ...s.deleteBtn }}>
+                    <i className="ti ti-trash" style={{ fontSize: 14 }} />
+                    <span>Видалити</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Вкладка відгуків */}
+      {activeTab === 'feedback' && (
+        <div style={s.card}>
+          <div style={s.cardHeader}>
+            <div style={s.sectionTitle}>Відгуки користувачів</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={s.userCount}>{feedback.length} відгуків</div>
+              <button onClick={loadFeedback} style={s.refreshBtn}>
+                <i className="ti ti-refresh" style={{ fontSize: 13 }} /> Оновити
+              </button>
+            </div>
+          </div>
+
+          {feedbackLoading && (
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              Завантаження...
+            </div>
+          )}
+
+          {!feedbackLoading && feedback.length === 0 && (
+            <div style={{ padding: 48, textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>💬</div>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>Відгуків поки немає</div>
+            </div>
+          )}
+
+          {!feedbackLoading && feedback.map(f => {
+            const type = FEEDBACK_TYPE[f.type] || FEEDBACK_TYPE.other
+            return (
+              <div key={f.id} style={s.feedbackRow}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div style={{ ...s.feedbackTypeBadge, background: type.bg, color: type.color }}>
+                    {type.emoji} {type.label}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={s.feedbackText}>{f.text}</div>
+                    <div style={s.feedbackMeta}>
+                      <span>👤 {f.user?.name || 'Анонім'}</span>
+                      <span>·</span>
+                      <span>{f.user?.email || '—'}</span>
+                      <span>·</span>
+                      <span>{new Date(f.createdAt).toLocaleDateString('uk', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Модалка повідомлення */}
       {msgModal && createPortal(
         <div style={s.overlay} onClick={e => e.target === e.currentTarget && setMsgModal(null)}>
           <div style={s.modal}>
@@ -201,21 +285,13 @@ export default function AdminPanel() {
 
             <div style={s.fieldGroup}>
               <label style={s.label}>Текст повідомлення</label>
-              <textarea
-                style={s.textarea}
-                placeholder="Введи повідомлення для користувача..."
-                value={msg}
-                onChange={e => setMsg(e.target.value)}
-                rows={5}
-                autoFocus
-              />
+              <textarea style={s.textarea} placeholder="Введи повідомлення для користувача..."
+                value={msg} onChange={e => setMsg(e.target.value)} rows={5} autoFocus />
               <div style={s.charCount}>{msg.length} символів</div>
             </div>
 
             <div style={s.modalBtns}>
-              <button onClick={() => { setMsgModal(null); setMsg('') }} style={s.cancelBtn}>
-                Скасувати
-              </button>
+              <button onClick={() => { setMsgModal(null); setMsg('') }} style={s.cancelBtn}>Скасувати</button>
               <button onClick={sendMessage} style={{ ...s.sendBtn, opacity: sending ? 0.7 : 1 }} disabled={sending}>
                 <i className="ti ti-send" style={{ fontSize: 14 }} />
                 {sending ? 'Надсилання...' : 'Надіслати'}
@@ -235,15 +311,19 @@ const s = {
   title: { fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 },
   subtitle: { fontSize: 13, color: 'var(--color-text-tertiary)' },
   rootBadge: { display: 'flex', alignItems: 'center', gap: 6, background: '#EEEDFE', color: '#534AB7', padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 500 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 },
+  statsGrid: { display: 'grid', gap: 14, marginBottom: 24 },
   statCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 18px' },
   statIcon: { width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   statLabel: { fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 4 },
   statVal: { fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)' },
+  tabs: { display: 'flex', gap: 8, marginBottom: 16 },
+  tab: { display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-primary)', color: 'var(--color-text-secondary)', fontSize: 13, cursor: 'pointer', fontWeight: 400 },
+  tabActive: { background: '#EEEDFE', color: '#534AB7', border: '0.5px solid #AFA9EC', fontWeight: 500 },
   card: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 20px 8px' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' },
   userCount: { fontSize: 12, color: 'var(--color-text-tertiary)' },
+  refreshBtn: { display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: 'none', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)' },
   userRow: { display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: '0.5px solid var(--color-border-tertiary)' },
   avatar: { width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 },
   userInfo: { flex: 1, minWidth: 0 },
@@ -252,13 +332,17 @@ const s = {
   blockedTag: { display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, background: '#FAECE7', color: '#993C1D', padding: '2px 8px', borderRadius: 20 },
   roleBadge: { padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, flexShrink: 0 },
   rootRole: { background: '#EEEDFE', color: '#534AB7' },
-  userRole: { background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)' },
+  userRoleBadge: { background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)' },
   actions: { display: 'flex', gap: 6 },
   actionBtn: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' },
   blockBtn: { color: '#985A00', borderColor: '#F5CBA7', background: '#FEF9F0' },
   unblockBtn: { color: '#3B6D11', borderColor: '#A9D18E', background: '#F0F7EC' },
   msgBtn: { color: '#534AB7', borderColor: '#AFA9EC', background: '#F5F4FE' },
   deleteBtn: { color: '#993C1D', borderColor: '#F5B8A8', background: '#FEF2EE' },
+  feedbackRow: { padding: '16px 0', borderBottom: '0.5px solid var(--color-border-tertiary)' },
+  feedbackTypeBadge: { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, flexShrink: 0 },
+  feedbackText: { fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.6, marginBottom: 8 },
+  feedbackMeta: { display: 'flex', gap: 8, fontSize: 11, color: 'var(--color-text-tertiary)', flexWrap: 'wrap' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(2px)' },
   modal: { background: 'var(--color-background-primary, #fff)', borderRadius: 16, padding: 28, width: 460, maxWidth: '92vw', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', border: '0.5px solid var(--color-border-tertiary)' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },

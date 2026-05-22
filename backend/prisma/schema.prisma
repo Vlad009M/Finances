@@ -31,6 +31,7 @@ model User {
   receivedMessages Message[]     @relation("ReceivedMessages")
   gameProfile      GameProfile?
   budgets Budget[]
+  feedback  Feedback[]
 }
 
 model Category {
@@ -124,4 +125,14 @@ model Budget {
 
   @@unique([userId, categoryId, month, year])
   @@index([userId, month, year])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      String   // 'bug' | 'idea' | 'other'
+  text      String
+  rating    Int?
+  createdAt DateTime @default(now())
 }
