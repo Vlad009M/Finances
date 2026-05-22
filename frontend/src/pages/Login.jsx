@@ -14,6 +14,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [captchaToken, setCaptchaToken] = useState(null)
   const isMobile = useIsMobile()
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -90,10 +91,18 @@ const handleGoogleLogin = () => {
               <input style={s.input} type="email" placeholder="your@email.com"
                 value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
-            <div style={s.fieldGroup}>
+              <div style={s.fieldGroup}>
               <label style={s.label}>Пароль</label>
-              <input style={s.input} type="password" placeholder="••••••••"
-                value={password} onChange={e => setPassword(e.target.value)} required />
+              <div style={{ position: 'relative' }}>
+                <input style={{ ...s.input, paddingRight: 40 }} 
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder="••••••••"
+                  value={password} onChange={e => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPassword(v => !v)}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: 0 }}>
+                  <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 18 }} />
+                </button>
+              </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
               <ReCAPTCHA

@@ -30,8 +30,8 @@ router.post('/register', async (req, res) => {
     if (typeof email !== 'string' || !email.includes('@')) {
       return res.status(400).json({ error: 'Невірний формат email' })
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Пароль мінімум 6 символів' })
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+  return res.status(400).json({ error: 'Пароль має містити мінімум 8 символів, велику літеру, цифру та спецсимвол' })
     }
     if (name.trim().length < 2) {
       return res.status(400).json({ error: 'Ім\'я мінімум 2 символи' })

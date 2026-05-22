@@ -14,27 +14,42 @@ export default function Register() {
   const navigate = useNavigate()
   const [captchaToken, setCaptchaToken] = useState(null)
   const isMobile = useIsMobile()
+  const [showPassword, setShowPassword] = useState(false)
+
+  const getPasswordStrength = (pwd) => {
+  const checks = {
+    length: pwd.length >= 8,
+    upper: /[A-Z]/.test(pwd),
+    number: /[0-9]/.test(pwd),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+  }
+  const passed = Object.values(checks).filter(Boolean).length
+  return { checks, passed }
+}
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!captchaToken) {
-      setError('Будь ласка, підтвердіть, що ви не робот')
-      return
-    }
-    if (password.length < 6) { setError('Пароль мінімум 6 символів'); return }
-    setLoading(true)
-    setError('')
-    try {
-      // ДОДАНО: captchaToken відправляєтся на сервер разом з іншими даними
-      const res = await api.post('/auth/register', { name, email, password, captchaToken })
-      localStorage.setItem('user', JSON.stringify(res.data.user))
-      posthog.identify(res.data.user.id, { email: res.data.user.email, name: res.data.user.name })
-      posthog.capture('user_registered', { method: 'email' })
-      window.location.href = '/dashboard'
-    } catch (e) {
-      setError(e.response?.data?.error || 'Помилка реєстрації')
-    }
-    setLoading(false)
+  e.preventDefault()
+  if (!captchaToken) {
+    setError('Будь ласка, підтвердіть, що ви не робот')
+    return
+  }
+  const { passed } = getPasswordStrength(password)
+  if (passed < 4) {
+    setError('Пароль не відповідає вимогам безпеки')
+    return
+  }
+  setLoading(true)  
+  setError('')     
+  try {
+    const res = await api.post('/auth/register', { name, email, password, captchaToken })
+    localStorage.setItem('user', JSON.stringify(res.data.user))
+    posthog.identify(res.data.user.id, { email: res.data.user.email, name: res.data.user.name })
+    posthog.capture('user_registered', { method: 'email' })
+    window.location.href = '/dashboard'
+  } catch (e) {
+    setError(e.response?.data?.error || 'Помилка реєстрації')
+  }
+  setLoading(false)
 }
 
 const handleGoogleLogin = () => {
@@ -90,7 +105,7 @@ const handleGoogleLogin = () => {
           <form onSubmit={handleSubmit} style={s.form}>
             <div style={s.fieldGroup}>
               <label style={s.label}>Ім'я</label>
-              <input style={s.input} type="text" placeholder="Владислав"
+              <input style={s.input} type="text" placeholder="Name"
                 value={name} onChange={e => setName(e.target.value)} required />
             </div>
             <div style={s.fieldGroup}>
@@ -100,9 +115,47 @@ const handleGoogleLogin = () => {
             </div>
             <div style={s.fieldGroup}>
               <label style={s.label}>Пароль</label>
-              <input style={s.input} type="password" placeholder="Мінімум 6 символів"
-                value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
+              <div style={{ position: 'relative' }}>
+                <input style={{ ...s.input, paddingRight: 40 }}
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder="Мінімум 8 символів"
+                  value={password} onChange={e => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPassword(v => !v)}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: 0 }}>
+                  <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`} style={{ fontSize: 18 }} />
+                </button>
+              </div>
+              {password.length > 0 && (() => {
+                const { checks, passed } = getPasswordStrength(password)
+                const colors = ['#993C1D', '#993C1D', '#BA7517', '#639922', '#0F6E56']
+                const labels = ['', 'Слабкий', 'Слабкий', 'Середній', 'Сильний']
+                return (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                      {[0,1,2,3].map(i => (
+                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < passed ? colors[passed] : '#e0e0e0', transition: 'background 0.2s' }} />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: colors[passed], fontWeight: 500, marginBottom: 4 }}>
+                      {labels[passed]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {[
+                        { key: 'length', label: 'Мінімум 8 символів' },
+                        { key: 'upper', label: 'Велика літера (A-Z)' },
+                        { key: 'number', label: 'Цифра (0-9)' },
+                        { key: 'special', label: 'Спецсимвол (!@#$...)' },
+                      ].map(({ key, label }) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: checks[key] ? '#639922' : '#888' }}>
+                          <i className={`ti ${checks[key] ? 'ti-check' : 'ti-x'}`} style={{ fontSize: 11 }} />
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+</div>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
               <ReCAPTCHA
                 sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LfLV_AsAAAAAA3n3mEV7uXNYWm7krW3XCEkgI9m"}
