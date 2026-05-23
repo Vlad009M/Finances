@@ -1,0 +1,72 @@
+name: Weekly Backup
+
+on:
+  schedule:
+    - cron: '0 10 * * 0'  # Щонеділі о 10:00 UTC (12:00 Київ)
+  workflow_dispatch:       # Дозволяє запустити вручну з GitHub UI
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Завантажуємо повну історію для bundle
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Supabase CLI
+        run: |
+          curl -sSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz
+          sudo mv supabase /usr/local/bin/supabase
+          supabase --version
+
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Dump database
+        run: |
+          supabase db dump \
+            --db-url "postgresql://postgres.mlxfhxsgechaisdtftkz:${{ secrets.DB_PASSWORD }}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres" \
+            -f aperio_db_${{ steps.date.outputs.DATE }}.sql
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Create git bundle
+        run: |
+          git bundle create aperio_code_${{ steps.date.outputs.DATE }}.bundle --all
+
+      - name: Checkout backup repo
+        uses: actions/checkout@v4
+        with:
+          repository: Vlad009M/aperio-backups
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: backup-repo
+
+      - name: Copy backups to backup repo
+        run: |
+          mkdir -p backup-repo/db
+          mkdir -p backup-repo/code
+          cp aperio_db_${{ steps.date.outputs.DATE }}.sql backup-repo/db/
+          cp aperio_code_${{ steps.date.outputs.DATE }}.bundle backup-repo/code/
+
+          # Залишаємо тільки 8 останніх бекапів
+          cd backup-repo/db
+          ls -t *.sql 2>/dev/null | tail -n +9 | xargs rm -f || true
+          cd ../code
+          ls -t *.bundle 2>/dev/null | tail -n +9 | xargs rm -f || true
+
+      - name: Push backups
+        run: |
+          cd backup-repo
+          git config user.name "Aperio Backup Bot"
+          git config user.email "backup@aperio.pp.ua"
+          git add .
+          git diff --staged --quiet || git commit -m "backup: ${{ steps.date.outputs.DATE }}"
+          git push
