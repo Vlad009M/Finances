@@ -83,39 +83,34 @@ const handleFileChange = async (e) => {
 
   setUploading(true)
   try {
-    // Стискаємо перед завантаженням
+    // 1. Стискаємо перед завантаженням
     const compressed = file.size > 2 * 1024 * 1024
       ? await compressImage(file)
       : file
 
+    // 2. Завантажуємо в Supabase
     const path = `${user.id}.jpg`
     const { error } = await supabase.storage.from('avatars').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
     if (error) throw error
+    
+    // 3. Отримуємо публічне посилання
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     const url = `${data.publicUrl}?t=${Date.now()}`
     setAvatarUrl(url)
-    toast.success('Фото завантажено!')
+
+    // 4. НОВЕ: Одразу зберігаємо посилання в базу даних і оновлюємо сайдбар
+    const res = await api.put('/user/profile', { name, avatarUrl: url })
+    const updated = { ...user, ...res.data.user }
+    localStorage.setItem('user', JSON.stringify(updated))
+    setUser(updated)
+    onUpdate(updated) // <--- Цей рядок миттєво оновлює фото в меню зліва!
+
+    toast.success('Фото завантажено і збережено!')
   } catch {
     toast.error('Помилка завантаження фото')
   }
   setUploading(false)
 }
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault()
-    setSavingProfile(true)
-    try {
-      const res = await api.put('/user/profile', { name, avatarUrl: avatarUrl || null })
-      const updated = { ...user, ...res.data.user }
-      localStorage.setItem('user', JSON.stringify(updated))
-      setUser(updated)
-      toast.success('Профіль оновлено!')
-      onUpdate(updated)
-    } catch (e) {
-      toast.error(e.response?.data?.error || 'Помилка')
-    }
-    setSavingProfile(false)
-  }
 
   const handleSavePassword = async (e) => {
     e.preventDefault()
