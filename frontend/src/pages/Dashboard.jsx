@@ -360,8 +360,8 @@ const handleResendCode = async () => {
   const [challengeData, setChallengeData] = useState(null)
 
   useEffect(() => {
-    api.get('/game').then(res => setChallengeData(res.data.challenge)).catch(() => {})
-  }, [])
+  api.get('/game').then(res => setChallengeData(res.data.challenge)).catch(() => {})
+}, [gameKey])
 
   const pieData = categories
     .filter(c => c.type === 'expense')

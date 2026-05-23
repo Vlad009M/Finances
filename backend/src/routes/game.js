@@ -5,17 +5,18 @@ const auth = require('../middleware/auth')
 const router = express.Router()
 
 // ── Конфіг рівнів ────────────────────────────────────────
+// ── Конфіг рівнів ────────────────────────────────────────
 const LEVELS = [
-  { level: 1,  title: 'Новачок',           xpRequired: 0,    icon: '🌱' },
-  { level: 2,  title: 'Економ',            xpRequired: 100,  icon: '💡' },
-  { level: 3,  title: 'Розважливий',       xpRequired: 250,  icon: '🧠' },
-  { level: 4,  title: 'Планувальник',      xpRequired: 500,  icon: '📋' },
-  { level: 5,  title: 'Стратег',           xpRequired: 900,  icon: '♟️' },
-  { level: 6,  title: 'Фінансист',         xpRequired: 1400, icon: '💼' },
-  { level: 7,  title: 'Інвестор',          xpRequired: 2000, icon: '📈' },
-  { level: 8,  title: 'Мудрець грошей',    xpRequired: 2800, icon: '🦉' },
-  { level: 9,  title: 'Майстер бюджету',   xpRequired: 3800, icon: '🏆' },
-  { level: 10, title: 'Фінансовий Гуру',   xpRequired: 5000, icon: '👑' },
+  { level: 1,  title: 'Новачок',          xpRequired: 0,    icon: '🌱' },
+  { level: 2,  title: 'Економ',            xpRequired: 200,  icon: '💡' },
+  { level: 3,  title: 'Розважливий',       xpRequired: 600,  icon: '🧠' },
+  { level: 4,  title: 'Планувальник',      xpRequired: 1200, icon: '📋' },
+  { level: 5,  title: 'Стратег',           xpRequired: 2000, icon: '♟️' },
+  { level: 6,  title: 'Фінансист',         xpRequired: 3500, icon: '💼' },
+  { level: 7,  title: 'Інвестор',          xpRequired: 5500, icon: '📈' },
+  { level: 8,  title: 'Мудрець грошей',    xpRequired: 8000, icon: '🦉' },
+  { level: 9,  title: 'Майстер бюджету',   xpRequired: 12000,icon: '🏆' },
+  { level: 10, title: 'Фінансовий Гуру',   xpRequired: 20000,icon: '👑' },
 ]
 
 // ── Ачівки ───────────────────────────────────────────────
@@ -123,7 +124,7 @@ async function recalcGame(userId) {
     prisma.category.findMany({ where: { userId } }),
   ])
 
-  let xp = profile?.xp || 0
+  let xp = 0
   const unlockedCodes = new Set(profile?.achievements?.map(a => a.code) || [])
   const newAchievements = []
 
@@ -138,7 +139,7 @@ async function recalcGame(userId) {
 
   // XP за транзакції
   const txCount = transactions.length
-  addXP(10) // базовий за поточну транзакцію
+  xp += txCount * 10
 
   // Ачівки за кількість транзакцій
   if (txCount >= 1)   addXP(50, 'first_tx')
@@ -159,7 +160,7 @@ async function recalcGame(userId) {
     streak = 1
   }
 
-  addXP(streak * 5) // XP за streak
+  xp += streak * 5
   if (streak >= 3)  addXP(50, 'streak_3')
   if (streak >= 7)  addXP(150, 'streak_7')
   if (streak >= 30) addXP(500, 'streak_30')
