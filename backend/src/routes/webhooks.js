@@ -16,7 +16,7 @@ router.post('/monobank', async (req, res) => {
 
       // amount приходить в копійках. 50 грн = 5000.
       // Шукаємо email у коментарі (коментар може містити щось окрім email-у, тому робимо базовий пошук)
-      if (amount > 0 && comment) {
+      if (amount >= 5000 && comment) {
         
         // Регулярний вираз для пошуку email у тексті коментаря
         const emailMatch = comment.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi)
