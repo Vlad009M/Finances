@@ -32,6 +32,8 @@ model User {
   gameProfile      GameProfile?
   budgets Budget[]
   feedback  Feedback[]
+  aiTokens         Int       @default(5)
+  lastRefillAt     DateTime  @default(now())
 }
 
 model Category {

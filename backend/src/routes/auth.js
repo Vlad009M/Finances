@@ -82,7 +82,7 @@ sendVerificationEmail(user.email, user.name, verifyCode).catch(console.error)
     )
 
     res.cookie('token', token, COOKIE_OPTIONS)
-    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified } })
   } catch (e) {
     res.status(500).json({ error: 'Помилка сервера' })
   }
@@ -138,7 +138,7 @@ if (!verifyData.success) {
     )
 
     res.cookie('token', token, COOKIE_OPTIONS)
-    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified } })
   } catch (e) {
     res.status(500).json({ error: 'Помилка сервера' })
   }
@@ -159,7 +159,7 @@ router.get('/me', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, name: true, role: true, blocked: true }
+      select: { id: true, email: true, name: true, role: true, blocked: true, emailVerified: true }
     })
 
     if (!user) return res.status(401).json({ error: 'Користувача не знайдено' })
@@ -170,7 +170,7 @@ router.get('/me', async (req, res) => {
       return res.status(403).json({ error: 'Акаунт заблоковано' })
     }
 
-    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
+    res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified } })
   } catch {
     res.status(401).json({ error: 'Невалідний токен' })
   }

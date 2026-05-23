@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "bun src/index.js",
     "dev": "bun --watch src/index.js",
-    "seed": "bun src/seed.js"
+    "seed": "bun src/seed.js",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",

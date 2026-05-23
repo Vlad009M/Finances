@@ -396,7 +396,6 @@ const handleResendCode = async () => {
     { id: 'import', icon: 'ti-download', label: 'Імпорт' },
     { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
     { id: 'game', icon: 'ti-sword', label: 'Герой' },
-    { id: '_feedback', icon: 'ti-message-circle', label: 'Залишити відгук' },
   ]
 
   const filteredCategories = categories.filter(c => c.type === form.type)

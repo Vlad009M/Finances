@@ -6,33 +6,70 @@ const auth = require('../middleware/auth')
 const router = express.Router()
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// 1. Новий ендпоінт для перевірки лімітів
+router.get('/limits', auth, async (req, res) => {
+  try {
+    let user = await prisma.user.findUnique({ where: { id: req.userId } })
+    const now = new Date()
+    const lastRefill = new Date(user.lastRefillAt)
+    const hoursPassed = (now - lastRefill) / (1000 * 60 * 60)
+
+    // Якщо минуло 12 годин - автоматично поповнюємо до 5
+    if (hoursPassed >= 12) {
+      user = await prisma.user.update({
+        where: { id: req.userId },
+        data: { aiTokens: 5, lastRefillAt: now }
+      })
+    }
+
+    const nextRefill = new Date(user.lastRefillAt.getTime() + 12 * 60 * 60 * 1000)
+
+    res.json({
+      tokens: user.aiTokens,
+      nextRefill: nextRefill.toISOString()
+    })
+  } catch (e) {
+    res.status(500).json({ error: 'Помилка отримання лімітів' })
+  }
+})
+
+// 2. Оновлений ендпоінт аналізу
 router.post('/analyze', auth, async (req, res) => {
   try {
+    // --- ПЕРЕВІРКА ЛІМІТІВ ---
+    let user = await prisma.user.findUnique({ where: { id: req.userId } })
     const now = new Date()
+    const lastRefill = new Date(user.lastRefillAt)
+    
+    // Визначаємо, чи це ти (по email або ролі)
+    const isAdmin = user.email === 'matovkavlad@gmail.com' || user.role === 'ROOT';
+    
+    // Перевіряємо, чи не час оновити ліміт (для звичайних юзерів)
+    if (!isAdmin && (now - lastRefill) / (1000 * 60 * 60) >= 12) {
+      user = await prisma.user.update({
+        where: { id: req.userId },
+        data: { aiTokens: 5, lastRefillAt: now }
+      })
+    }
+
+    // Блокуємо тільки якщо це НЕ адмін і токенів 0
+    if (!isAdmin && user.aiTokens <= 0) {
+      return res.status(403).json({ error: 'LIMIT_REACHED' })
+    }
+    // -------------------------
+
     const month = now.getMonth()
     const year = now.getFullYear()
 
     // Отримуємо транзакції поточного місяця
     const transactions = await prisma.transaction.findMany({
-      where: {
-        userId: req.userId,
-        date: {
-          gte: new Date(year, month, 1),
-          lt: new Date(year, month + 1, 1)
-        }
-      },
+      where: { userId: req.userId, date: { gte: new Date(year, month, 1), lt: new Date(year, month + 1, 1) } },
       include: { category: true }
     })
 
     // Отримуємо транзакції минулого місяця для порівняння
     const prevTransactions = await prisma.transaction.findMany({
-      where: {
-        userId: req.userId,
-        date: {
-          gte: new Date(year, month - 1, 1),
-          lt: new Date(year, month, 1)
-        }
-      },
+      where: { userId: req.userId, date: { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) } },
       include: { category: true }
     })
 
@@ -85,10 +122,20 @@ ${categoryText}
 (розбивка по категоріях на наступний місяць)`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }]
     })
+
+    // --- ЗНІМАЄМО ТОКЕН ---
+    // Віднімаємо токен ТІЛЬКИ якщо це НЕ адмін
+    if (!isAdmin) {
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { aiTokens: { decrement: 1 } }
+      })
+    }
+    // -----------------------
 
     res.json({ analysis: message.content[0].text })
   } catch (e) {
