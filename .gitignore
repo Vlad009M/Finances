@@ -8,3 +8,4 @@ dist/
 .idea/
 .vscode/
 .Docs.md
+backup.bat
