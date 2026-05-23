@@ -1,9 +1,4 @@
-const express = require('express')
-const cors = require('cors')
-const helmet = require('helmet')
-const rateLimit = require('express-rate-limit')
-const cookieParser = require('cookie-parser')
-
+require('dotenv').config()
 const Sentry = require('@sentry/node')
 
 Sentry.init({
@@ -12,7 +7,11 @@ Sentry.init({
   tracesSampleRate: 1.0,
 })
 
-require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const helmet = require('helmet')
+const rateLimit = require('express-rate-limit')
+const cookieParser = require('cookie-parser')
 
 const app = express()
 app.set('trust proxy', 1)
