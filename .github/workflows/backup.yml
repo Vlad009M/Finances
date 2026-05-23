@@ -3,7 +3,7 @@ name: Weekly Backup
 on:
   schedule:
     - cron: '0 10 * * 0'  # Щонеділі о 10:00 UTC (12:00 Київ)
-  workflow_dispatch:       # Дозволяє запустити вручну з GitHub UI
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -20,8 +20,11 @@ jobs:
 
       - name: Install Supabase CLI
         run: |
-          curl -sSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz
-          sudo mv supabase /usr/local/bin/supabase
+          mkdir -p "$HOME/.local/share/supabase"
+          curl -sL https://github.com/supabase/cli/releases/download/v2.101.0/supabase_2.101.0_linux_amd64.tar.gz \
+            | tar -xzf - -C "$HOME/.local/share/supabase"
+          export PATH="$HOME/.local/share/supabase:$PATH"
+          echo "$HOME/.local/share/supabase" >> $GITHUB_PATH
           supabase --version
 
       - name: Get current date
