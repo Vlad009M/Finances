@@ -43,9 +43,9 @@ model Category {
   color        String?
   type         String
   userId       String
-  user         User          @relation(fields: [userId], references: [id])
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
-  budgets Budget[]
+  budgets     Budget[]
 }
 
 model Transaction {
@@ -56,8 +56,8 @@ model Transaction {
   date        DateTime  @default(now())
   userId      String
   categoryId  String
-  user        User      @relation(fields: [userId], references: [id])
-  category    Category  @relation(fields: [categoryId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([date])
@@ -71,8 +71,8 @@ model Message {
   createdAt DateTime @default(now())
   fromId    String
   toId      String
-  from      User     @relation("SentMessages", fields: [fromId], references: [id])
-  to        User     @relation("ReceivedMessages", fields: [toId], references: [id])
+  from      User     @relation("SentMessages", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User     @relation("ReceivedMessages", fields: [toId], references: [id], onDelete: Cascade)
 }
 
 model GameProfile {
