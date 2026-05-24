@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [verifyError, setVerifyError] = useState('')
   const [verifySuccess, setVerifySuccess] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [budgetsData, setBudgetsData] = useState([])
 
 const handleVerifyEmail = async () => {
   if (!verifyCode || verifyCode.length !== 6) {
@@ -192,9 +193,10 @@ const handleResendCode = async () => {
 
   const loadData = async () => {
   try {
-    const [catsRes, txRes] = await Promise.all([
+    const [catsRes, txRes, budgetsRes] = await Promise.all([
       api.get('/categories'),
-      api.get('/transactions')
+      api.get('/transactions'),
+      api.get(`/budgets?month=${now.getMonth() + 1}&year=${now.getFullYear()}`)
     ])
 
     let cats = catsRes.data
@@ -213,6 +215,7 @@ const handleResendCode = async () => {
     })
     setCategories(unique)
     setAllTransactions(txRes.data)
+    setBudgetsData(budgetsRes.data)
     calcPrevStats(txRes.data)
   } catch {
     toast.error('Помилка завантаження')
@@ -359,6 +362,31 @@ const handleResendCode = async () => {
   const incomeChange = prevStats.income > 0 ? Math.round(((stats.income - prevStats.income) / prevStats.income) * 100) : null
   const expenseChange = prevStats.expense > 0 ? Math.round(((stats.expense - prevStats.expense) / prevStats.expense) * 100) : null
   const savings = stats.income > 0 ? Math.round(((stats.income - stats.expense) / stats.income) * 100) : 0
+  const calcSafeToSpend = () => {
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const spentToday = allTransactions.filter(t => {
+    const d = new Date(t.date)
+    return t.type === 'expense' &&
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+  }).reduce((s, t) => s + t.amount, 0)
+
+  if (stats.income === 0) return null
+
+  const totalBudget = budgetsData.reduce((s, b) => s + b.amount, 0)
+
+  if (totalBudget === 0) {
+    const remaining = stats.income - stats.expense
+    return Math.max(0, (remaining / daysInMonth) - spentToday)
+  }
+
+  const dailyBudget = totalBudget / daysInMonth
+  return Math.max(0, dailyBudget - spentToday)
+}
+
+const safeToSpend = calcSafeToSpend()
+const hasBudgets = budgetsData.length > 0
   const [challengeData, setChallengeData] = useState(null)
 
   useEffect(() => {
@@ -559,6 +587,35 @@ const handleResendCode = async () => {
             <div style={{ ...s.twoCol, gridTemplateColumns: isMobile ? '1fr' : '1fr 280px' }}>
               {/* LEFT */}
               <div>
+                {filterMonth === now.getMonth() && filterYear === now.getFullYear() && (
+                    <div style={s.safeCard}>
+                      {safeToSpend === null ? (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={s.safeLabel}>💰 Safe-to-Spend</div>
+                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+                            Додай дохід щоб побачити денний ліміт
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={s.safeLabel}>Сьогодні безпечно витратити</div>
+                            <div style={s.safeAmount}>
+                              {safeToSpend === 0 ? '₴0' : `₴${Math.round(safeToSpend).toLocaleString()}`}
+                            </div>
+                            <div style={s.safeSubtext}>
+                              {safeToSpend === 0
+                                ? 'Сьогодні краще пригальмувати ☕'
+                                : !hasBudgets
+                                ? 'Встанови бюджети для точнішого розрахунку'
+                                : 'На основі твоїх бюджетів'}
+                            </div>
+                          </div>
+                          <div style={s.safeIcon}>💸</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 <div style={s.balanceCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -1106,4 +1163,8 @@ const s = {
   footerLink: { fontSize: 12, color: 'var(--color-text-tertiary)', textDecoration: 'none' },
   betaBadge: { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#EEEDFE', color: '#534AB7', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '3px 8px', borderRadius: 20, border: 'none', cursor: 'pointer' },
   betaDot: { width: 6, height: 6, borderRadius: '50%', background: '#7F77DD', display: 'inline-block', boxShadow: '0 0 0 2px rgba(127,119,221,0.3)' },
+  safeCard: { borderRadius: 14, padding: '16px 20px', background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: '#1a1a2e', marginBottom: 16 },
+  safeLabel: { fontSize: 12, opacity: 0.75, marginBottom: 4, fontWeight: 500 },
+  safeAmount: { fontSize: 36, fontWeight: 700, marginBottom: 4 },
+  safeSubtext: { fontSize: 12, opacity: 0.65 }
 }
