@@ -50,7 +50,13 @@ export default function Import({ categories, onSuccess, emailVerified }) {
         const transactions = results.data
           .filter(row => row[amountCol] && row[dateCol])
           .map(row => {
-            const rawAmount = parseFloat(String(row[amountCol]).replace(/\s/g, '').replace(',', '.'))
+            const rawAmount = parseFloat(
+              String(row[amountCol])
+                .replace(/\s/g, '')      
+                .replace(/\u00a0/g, '')  
+                .replace(',', '.')       
+                .replace(/[^\d.-]/g, '') 
+            )
             const amount = Math.abs(rawAmount)
             const type = rawAmount < 0 ? 'expense' : 'income'
             const dateStr = row[dateCol]
@@ -320,7 +326,7 @@ export default function Import({ categories, onSuccess, emailVerified }) {
                     >
                       <option value="">Оберіть категорію</option>
                       {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                        <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   )}

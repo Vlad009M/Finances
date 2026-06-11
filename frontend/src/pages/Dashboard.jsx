@@ -890,12 +890,12 @@ const handleResendCode = async () => {
                   <button onClick={() => { const d = new Date(filterYear, filterMonth + 1); setFilterMonth(d.getMonth()); setFilterYear(d.getFullYear()) }} style={s.monthBtn}>›</button>
                 </div>
               </div>
-               <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowBulkDelete(true)} style={{ ...s.addBtn, background: '#FEF2EE', color: '#993C1D', border: '0.5px solid #F5B8A8', opacity: emailVerified ? 1 : 0.5 }} disabled={!emailVerified}>
-                <i className="ti ti-trash" /> Видалити
+               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowBulkDelete(true)} style={{ ...s.addBtn, background: '#FEF2EE', color: '#993C1D', border: '0.5px solid #F5B8A8', opacity: emailVerified ? 1 : 0.5, ...(isMobile && { padding: '8px 12px', fontSize: 12 }) }} disabled={!emailVerified}>
+                <i className="ti ti-trash" /> {!isMobile && 'Видалити'}
               </button>
-              <button onClick={() => { setActiveTab('dashboard'); setShowForm(true) }} style={{ ...s.addBtn, opacity: emailVerified ? 1 : 0.5 }} disabled={!emailVerified}>
-                <i className="ti ti-plus" /> Додати
+              <button onClick={() => { setActiveTab('dashboard'); setShowForm(true) }} style={{ ...s.addBtn, opacity: emailVerified ? 1 : 0.5, ...(isMobile && { padding: '8px 12px', fontSize: 12 }) }} disabled={!emailVerified}>
+                <i className="ti ti-plus" /> {!isMobile && 'Додати'}
               </button>
             </div>
             </div>

@@ -161,7 +161,7 @@ export default function AdminPanel() {
           </div>
 
           {users.map(u => (
-            <div key={u.id} style={{ ...s.userRow, opacity: u.blocked ? 0.55 : 1 }}>
+            <div key={u.id} style={{ ...s.userRow, opacity: u.blocked ? 0.55 : 1, ...(isMobile && { flexWrap: 'wrap' }) }}>
               <div style={{ ...s.avatar, background: u.role === 'ROOT' ? '#EEEDFE' : '#f5f5f5', color: u.role === 'ROOT' ? '#534AB7' : '#888' }}>
                 {u.name[0].toUpperCase()}
               </div>
@@ -185,25 +185,25 @@ export default function AdminPanel() {
               </span>
 
               {u.role !== 'ROOT' && (
-                <div style={s.actions}>
-                  <button onClick={() => changeRole(u.id, u.role)} style={s.actionBtn} title="Змінити роль">
-                    <i className="ti ti-shield" style={{ fontSize: 14 }} />
-                    <span>→ ROOT</span>
-                  </button>
-                  <button onClick={() => toggleBlock(u.id, u.blocked, u.name)}
-                    style={{ ...s.actionBtn, ...(u.blocked ? s.unblockBtn : s.blockBtn) }}>
-                    <i className={`ti ${u.blocked ? 'ti-lock-open' : 'ti-lock'}`} style={{ fontSize: 14 }} />
-                    <span>{u.blocked ? 'Розблокувати' : 'Заблокувати'}</span>
-                  </button>
-                  <button onClick={() => { setMsgModal(u); setMsg('') }} style={{ ...s.actionBtn, ...s.msgBtn }}>
-                    <i className="ti ti-message" style={{ fontSize: 14 }} />
-                    <span>Повідомлення</span>
-                  </button>
-                  <button onClick={() => deleteUser(u.id, u.name)} style={{ ...s.actionBtn, ...s.deleteBtn }}>
-                    <i className="ti ti-trash" style={{ fontSize: 14 }} />
-                    <span>Видалити</span>
-                  </button>
-                </div>
+                <div style={{ ...s.actions, ...(isMobile && { marginTop: 8, width: '100%' }) }}>
+                <button onClick={() => changeRole(u.id, u.role)} style={s.actionBtn} title="Змінити роль">
+                  <i className="ti ti-shield" style={{ fontSize: 14 }} />
+                  {!isMobile && <span>→ ROOT</span>}
+                </button>
+                <button onClick={() => toggleBlock(u.id, u.blocked, u.name)}
+                  style={{ ...s.actionBtn, ...(u.blocked ? s.unblockBtn : s.blockBtn) }}>
+                  <i className={`ti ${u.blocked ? 'ti-lock-open' : 'ti-lock'}`} style={{ fontSize: 14 }} />
+                  <span>{u.blocked ? 'Розблок.' : 'Блок.'}</span>
+                </button>
+                <button onClick={() => { setMsgModal(u); setMsg('') }} style={{ ...s.actionBtn, ...s.msgBtn }}>
+                  <i className="ti ti-message" style={{ fontSize: 14 }} />
+                  {!isMobile && <span>Повідомлення</span>}
+                </button>
+                <button onClick={() => deleteUser(u.id, u.name)} style={{ ...s.actionBtn, ...s.deleteBtn }}>
+                  <i className="ti ti-trash" style={{ fontSize: 14 }} />
+                  {!isMobile && <span>Видалити</span>}
+                </button>
+              </div>
               )}
             </div>
           ))}
@@ -333,7 +333,7 @@ const s = {
   roleBadge: { padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500, flexShrink: 0 },
   rootRole: { background: '#EEEDFE', color: '#534AB7' },
   userRoleBadge: { background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)' },
-  actions: { display: 'flex', gap: 6 },
+  actions: { display: 'flex', gap: 6, flexWrap: 'wrap' },
   actionBtn: { display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 7, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' },
   blockBtn: { color: '#985A00', borderColor: '#F5CBA7', background: '#FEF9F0' },
   unblockBtn: { color: '#3B6D11', borderColor: '#A9D18E', background: '#F0F7EC' },

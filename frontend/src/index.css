@@ -42,6 +42,7 @@ body {
   margin: 0;
   background: var(--color-background-tertiary);
   transition: background 0.2s ease, color 0.2s ease;
+  overflow-x: hidden;
 }
 
 #root {

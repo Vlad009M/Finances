@@ -2,14 +2,22 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
 import { useIsMobile } from '../hooks/useResponsive.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function GamePage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('hero')
   const isMobile = useIsMobile()
+  const { user } = useAuth()
+  const hasFetched = useRef(false)
 
-  useEffect(() => { loadGame() }, [])
+  useEffect(() => {
+    if (!user) return          
+    if (hasFetched.current) return  і
+    hasFetched.current = true
+    loadGame()
+  }, [user])
 
   const loadGame = async () => {
     try {
