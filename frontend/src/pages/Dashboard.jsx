@@ -562,9 +562,11 @@ const handleResendCode = async () => {
                   <button onClick={() => { const d = new Date(filterYear, filterMonth + 1); setFilterMonth(d.getMonth()); setFilterYear(d.getFullYear()) }} style={s.monthBtn}>›</button>
                 </div>
               </div>
-              <button onClick={() => emailVerified && setShowForm(!showForm)} style={{ ...s.addBtn, opacity: emailVerified ? 1 : 0.5 }} disabled={!emailVerified}>
-                <i className="ti ti-plus" /> {showForm ? 'Закрити' : 'Додати'}
-              </button>
+              {!isMobile && (
+                <button onClick={() => emailVerified && setShowForm(!showForm)} style={{ ...s.addBtn, opacity: emailVerified ? 1 : 0.5 }} disabled={!emailVerified}>
+                  <i className="ti ti-plus" /> {showForm ? 'Закрити' : 'Додати'}
+                </button>
+              )}
             </div>
 
             {/* FORM */}
@@ -684,11 +686,11 @@ const handleResendCode = async () => {
                         </div>
                       </div>
                     </div>
-                    <SparkLine transactions={transactions} />
+                    {!isMobile && <SparkLine transactions={transactions} />}
                   </div>
                 </div>
 
-                <div style={s.statsGrid}>
+                <div style={{ ...s.statsGrid, ...(isMobile && { gap: 6 }) }}>
                   <div style={s.statCard}>
                     <div style={s.statIcon}>
                       <img src="/icons/income-stat.svg" width={34} height={34} alt="" />
@@ -1144,7 +1146,7 @@ const s = {
   select: { flex: 1, padding: '9px 12px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' },
   input: { flex: 1, padding: '9px 12px', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' },
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' },
-  balanceCard: { borderRadius: 14, padding: '16px 20px', background: 'linear-gradient(135deg, #7F77DD 0%, #534AB7 100%)', color: '#fff', marginBottom: 16, position: 'relative', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' },
+  balanceCard: { borderRadius: 14, padding: '14px 16px', background: 'linear-gradient(135deg, #7F77DD 0%, #534AB7 100%)', color: '#fff', marginBottom: 16, position: 'relative', overflow: 'hidden', width: '100%', boxSizing: 'border-box' },
   balanceLabel: { fontSize: 12, opacity: 0.75, marginBottom: 6 },
   balanceAmount: { fontSize: 32, fontWeight: 500, marginBottom: 18 },
   balanceRow: { display: 'flex', gap: 24 },
@@ -1152,10 +1154,10 @@ const s = {
   balanceSubLabel: { fontSize: 11, opacity: 0.7 },
   balanceSubVal: { fontSize: 15, fontWeight: 500 },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20, maxWidth: '100%' },
-  statCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '14px 16px' },
+  statCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '12px 10px', minWidth: 0, overflow: 'hidden' },
   statIcon: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   statLabel: { fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 4 },
-  statVal: { fontSize: 19, fontWeight: 500, color: 'var(--color-text-primary)' },
+  statVal: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   statChange: { fontSize: 11, marginTop: 4 },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionTitle: { fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' },
@@ -1211,7 +1213,7 @@ const s = {
   footerLink: { fontSize: 12, color: 'var(--color-text-tertiary)', textDecoration: 'none' },
   betaBadge: { display: 'inline-flex', alignItems: 'center', gap: 5, background: '#EEEDFE', color: '#534AB7', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '3px 8px', borderRadius: 20, border: 'none', cursor: 'pointer' },
   betaDot: { width: 6, height: 6, borderRadius: '50%', background: '#7F77DD', display: 'inline-block', boxShadow: '0 0 0 2px rgba(127,119,221,0.3)' },
-  safeCard: { borderRadius: 14, padding: '16px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', marginBottom: 16, boxShadow: '0 1px 3px rgba(16, 185, 129, 0.15)' },
+  safeCard: { borderRadius: 14, padding: '14px 16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', marginBottom: 16, boxShadow: '0 1px 3px rgba(16, 185, 129, 0.15)', width: '100%', boxSizing: 'border-box', overflow: 'hidden' },
   safeLabel: { fontSize: 12, opacity: 0.85, marginBottom: 6, fontWeight: 500 },
   safeAmount: { fontSize: 30, fontWeight: 600, marginBottom: 4 },
   safeSubtext: { fontSize: 12, opacity: 0.85 },
