@@ -5,10 +5,42 @@ const auth = require('../middleware/auth')
 const router = express.Router()
 
 router.get('/', auth, async (req, res) => {
-  const categories = await prisma.category.findMany({
-    where: { userId: req.userId }
-  })
-  res.json(categories)
+  try {
+    const categories = await prisma.category.findMany({
+      where: { userId: req.userId }
+    })
+
+    // Рахуємо використання за останні 30 днів
+    const since = new Date()
+    since.setDate(since.getDate() - 30)
+
+    const usage = await prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: {
+        userId: req.userId,
+        date: { gte: since }
+      },
+      _count: { categoryId: true }
+    })
+
+    // Мапа categoryId -> кількість використань
+    const usageMap = {}
+    usage.forEach(u => {
+      usageMap[u.categoryId] = u._count.categoryId
+    })
+
+    // Сортуємо: спочатку по частоті (desc), потім алфавітно
+    const sorted = categories.sort((a, b) => {
+      const countA = usageMap[a.id] || 0
+      const countB = usageMap[b.id] || 0
+      if (countB !== countA) return countB - countA
+      return a.name.localeCompare(b.name)
+    })
+
+    res.json(sorted)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 router.post('/', auth, async (req, res) => {
