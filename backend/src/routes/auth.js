@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto') 
 const prisma = require('../prisma')
 const { sendVerificationEmail } = require('../email')
+const { signToken } = require('../utils/token') // S3
 
 const router = express.Router()
 
@@ -84,11 +85,7 @@ await prisma.user.update({
 
 sendVerificationEmail(user.email, user.name, verifyCode).catch(console.error)
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = signToken(user) // S3: токен містить tokenVersion
 
     res.cookie('token', token, COOKIE_OPTIONS)
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified, avatarUrl: user.avatarUrl } })
@@ -140,11 +137,7 @@ if (!verifyData.success) {
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) return res.status(400).json({ error: 'Невірний email або пароль' })
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = signToken(user) // S3: токен містить tokenVersion
 
     res.cookie('token', token, COOKIE_OPTIONS)
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified, avatarUrl: user.avatarUrl } })
@@ -253,11 +246,7 @@ router.get('/google/callback', async (req, res) => {
 
     if (user.blocked) return res.redirect(`${FRONTEND_URL}/login?error=blocked`)
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    const token = signToken(user) // S3: токен містить tokenVersion
 
     res.cookie('token', token, COOKIE_OPTIONS)
     res.redirect(`${FRONTEND_URL}/dashboard`)

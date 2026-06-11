@@ -2,12 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import api from '../api/index.js'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
 
 export default function ProfileModal({ onClose, onUpdate }) {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
@@ -77,38 +71,38 @@ export default function ProfileModal({ onClose, onUpdate }) {
   })
 }
 
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
 const handleFileChange = async (e) => {
   const file = e.target.files?.[0]
   if (!file) return
 
   setUploading(true)
   try {
-    // 1. Стискаємо перед завантаженням
-    const compressed = file.size > 2 * 1024 * 1024
-      ? await compressImage(file)
-      : file
+    // Завжди стискаємо у JPEG (≤2MB) — бекенд приймає лише JPEG
+    const compressed = await compressImage(file)
+    const base64 = await fileToBase64(compressed)
 
-    // 2. Завантажуємо в Supabase
-    const path = `${user.id}.jpg`
-    const { error } = await supabase.storage.from('avatars').upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
-    if (error) throw error
-    
-    // 3. Отримуємо публічне посилання
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-    const url = `${data.publicUrl}?t=${Date.now()}`
+    // Аплоад ЧЕРЕЗ бекенд (валідація magic-bytes + service-role), не напряму в Supabase
+    const res = await api.post('/user/avatar', { image: base64 })
+    const url = res.data.user.avatarUrl
     setAvatarUrl(url)
 
-    // 4. НОВЕ: Одразу зберігаємо посилання в базу даних і оновлюємо сайдбар
-    const res = await api.put('/user/profile', { name, avatarUrl: url })
     const updated = { ...user, ...res.data.user }
     localStorage.setItem('user', JSON.stringify(updated))
     setUser(updated)
     window.dispatchEvent(new Event('user-updated'))
-    onUpdate(updated) // <--- Цей рядок миттєво оновлює фото в меню зліва!
+    onUpdate(updated)
 
     toast.success('Фото завантажено і збережено!')
-  } catch {
-    toast.error('Помилка завантаження фото')
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Помилка завантаження фото')
   }
   setUploading(false)
 }
@@ -117,7 +111,7 @@ const handleFileChange = async (e) => {
     e.preventDefault()
     setSavingProfile(true)
     try {
-      const res = await api.put('/user/profile', { name, avatarUrl: avatarUrl || null })
+      const res = await api.put('/user/profile', { name })
       const updated = { ...user, ...res.data.user }
       localStorage.setItem('user', JSON.stringify(updated))
       setUser(updated)
@@ -250,7 +244,7 @@ const handleFileChange = async (e) => {
             <div style={s.field}>
               <label style={s.label}>Новий пароль</label>
               <input style={s.input} type="password" value={newPassword}
-                onChange={e => setNewPassword(e.target.value)} required minLength={6} placeholder="Мінімум 6 символів" />
+                onChange={e => setNewPassword(e.target.value)} required minLength={8} placeholder="Мін. 8 символів, велика літера, цифра, спецсимвол" />
             </div>
             <div style={s.field}>
               <label style={s.label}>Підтвердження нового пароля</label>
@@ -266,6 +260,30 @@ const handleFileChange = async (e) => {
             <button type="submit" style={{ ...s.saveBtn, opacity: savingPassword ? 0.7 : 1 }} disabled={savingPassword}>
               {savingPassword ? 'Збереження...' : 'Змінити пароль'}
             </button>
+
+            <div style={{ marginTop: 24, borderTop: '1px solid var(--color-border-tertiary)', paddingTop: 20 }}>
+              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+                Підозрюєте, що ваш акаунт скомпрометовано? Ви можете примусово завершити всі активні сесії на інших пристроях.
+              </div>
+              <button 
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!window.confirm('Ви впевнені, що хочете вийти з усіх пристроїв?')) return;
+                  try {
+                    await api.post('/user/logout-all');
+                    toast.success('Успішно вийшли з усіх пристроїв');
+                    // Опційно: розлогінити і поточний пристрій
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                  } catch (err) {
+                    toast.error('Помилка при виході з пристроїв');
+                  }
+                }}
+                style={{ padding: '9px 16px', background: '#FEF2EE', color: '#993C1D', border: '1px solid #F5B8A8', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 500, width: '100%' }}
+              >
+                Вийти з усіх пристроїв
+              </button>
+            </div>
           </form>
         )}
 

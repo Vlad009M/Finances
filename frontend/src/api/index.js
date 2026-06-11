@@ -10,11 +10,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname
-      // Редіректимо ТІЛЬКИ якщо запит був до /auth/me
-      // Інші 401 ігноруємо — це нормально для cross-domain staging
-      if (error.config?.url?.includes('/auth/me') && 
-          currentPath !== '/login' && 
-          currentPath !== '/register') {
+      // Тепер ловимо БУДЬ-ЯКИЙ 401 запит (через фічу tokenVersion)
+      // і викидаємо на сторінку логіну
+      if (currentPath !== '/login' && currentPath !== '/register') {
         localStorage.removeItem('user')
         window.location.href = '/login'
       }
