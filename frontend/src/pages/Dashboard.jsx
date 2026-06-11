@@ -741,7 +741,7 @@ const handleResendCode = async () => {
                           <div style={s.txIcon}>
                             <img 
                               src={CATEGORIES.find(c => c.name === t.category?.name)?.icon || '/icons/other.svg'} 
-                              width={38} height={38} alt="" />
+                              width={isMobile ? 32 : 38} height={isMobile ? 32 : 38} alt="" />
                           </div>
                           <div style={s.txInfo}>
                             <div style={s.txName}>{t.category?.name || 'Інше'}</div>
@@ -914,7 +914,7 @@ const handleResendCode = async () => {
                     <div style={s.txIcon}>
                       <img 
                         src={CATEGORIES.find(c => c.name === t.category?.name)?.icon || '/icons/other.svg'} 
-                        width={38} height={38} alt="" />
+                        width={isMobile ? 32 : 38} height={isMobile ? 32 : 38} alt="" />
                     </div>
                     <div style={s.txInfo}>
                       <div style={s.txName}>{t.category?.name || 'Інше'}</div>
@@ -930,7 +930,7 @@ const handleResendCode = async () => {
                           title={t._optimistic ? 'Збереження...' : 'Редагувати'}
                           disabled={t._optimistic}
                         >
-                        <img src="/icons/edit.svg" width={28} height={28} alt="edit" />
+                        <img src="/icons/edit.svg" width={isMobile ? 24 : 28} height={isMobile ? 24 : 28} alt="edit" />
                       </button>
                       <button 
                             onClick={() => !t._optimistic && deleteTransaction(t.id)} 
@@ -938,7 +938,7 @@ const handleResendCode = async () => {
                             title={t._optimistic ? 'Збереження...' : 'Видалити'}
                             disabled={t._optimistic}
                           >
-                        <img src="/icons/delete.svg" width={28} height={28} alt="delete" />
+                        <img src="/icons/delete.svg" width={isMobile ? 24 : 28} height={isMobile ? 24 : 28} alt="delete" />
                       </button>
                     </div>
                   </div>
@@ -1121,7 +1121,7 @@ const handleResendCode = async () => {
 }
 
 const s = {
-  app: { display: 'flex', minHeight: '100vh', background: 'var(--color-background-tertiary, #f4f5f7)' },
+  app: { display: 'flex', minHeight: '100vh', background: 'var(--color-background-tertiary, #f4f5f7)', width: '100%', maxWidth: '100vw', overflowX: 'hidden' },
   sidebar: { width: 210, background: 'var(--color-background-primary)', borderRight: '0.5px solid var(--color-border-tertiary)', padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 2, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' },
   logoRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '4px 8px', marginBottom: 20 },
   logoText: { fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' },
@@ -1148,7 +1148,7 @@ const s = {
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' },
   balanceCard: { borderRadius: 14, padding: '14px 16px', background: 'linear-gradient(135deg, #7F77DD 0%, #534AB7 100%)', color: '#fff', marginBottom: 16, position: 'relative', overflow: 'hidden', width: '100%', boxSizing: 'border-box' },
   balanceLabel: { fontSize: 12, opacity: 0.75, marginBottom: 6 },
-  balanceAmount: { fontSize: 32, fontWeight: 500, marginBottom: 18 },
+  balanceAmount: { fontSize: 28, fontWeight: 500, marginBottom: 14 },
   balanceRow: { display: 'flex', gap: 24 },
   balanceSub: { display: 'flex', flexDirection: 'column', gap: 2 },
   balanceSubLabel: { fontSize: 11, opacity: 0.7 },
@@ -1164,7 +1164,7 @@ const s = {
   seeAll: { fontSize: 12, color: '#7F77DD', cursor: 'pointer' },
   txCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12 },
   txRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: '0.5px solid var(--color-border-tertiary)' },
-  txIcon: { width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  txIcon: { width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   txInfo: { flex: 1, minWidth: 0 },
   txName: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
   txDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' },
