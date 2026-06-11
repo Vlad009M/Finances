@@ -603,7 +603,7 @@ const handleResendCode = async () => {
 
             <div style={{ ...s.twoCol, gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: isMobile ? 12 : 20 }}>
               {/* LEFT */}
-              <div>
+              <div style={{ minWidth: 0, width: '100%', overflow: 'hidden' }}>
                 {filterMonth === now.getMonth() && filterYear === now.getFullYear() && (
                   <div style={s.safeCard}>
                     {safeToSpend === null ? (
@@ -731,7 +731,7 @@ const handleResendCode = async () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: isMobile ? 12 : 16, alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={s.txCard}>
+                  <div style={{ ...s.txCard, minWidth: 0 }}>
                     {transactions.slice(0, 6).map(t => {
                       const catDef = CATEGORIES.find(c => c.name === t.category?.name)
                       return (
