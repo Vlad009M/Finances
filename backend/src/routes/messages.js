@@ -14,7 +14,7 @@ router.get('/', auth, async (req, res) => {
     res.json(messages)
   } catch (e) {
     console.error('Messages GET error:', e.message)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -27,7 +27,7 @@ router.patch('/:id/read', auth, async (req, res) => {
     res.json({ success: true })
   } catch (e) {
     console.error('Messages PATCH error:', e.message)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 

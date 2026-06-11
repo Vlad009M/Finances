@@ -2,7 +2,14 @@ const { Resend } = require('resend')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// S7: екранування для вставки користувацьких даних у HTML листа
+const escapeHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  )
+
 const sendVerificationEmail = async (email, name, code) => {
+  const safeName = escapeHtml(name)
   await resend.emails.send({
     from: 'Aperio <noreply@aperio.pp.ua>',
     to: email,
@@ -10,7 +17,7 @@ const sendVerificationEmail = async (email, name, code) => {
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <img src="https://aperio.pp.ua/Aperio.png" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
-        <h1 style="font-size: 22px; color: #1a1a2e; margin-bottom: 8px;">Привіт, ${name}!</h1>
+        <h1 style="font-size: 22px; color: #1a1a2e; margin-bottom: 8px;">Привіт, ${safeName}!</h1>
         <p style="color: #555; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
           Твій код підтвердження email для Aperio:
         </p>

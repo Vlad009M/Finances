@@ -35,16 +35,18 @@ app.use(cookieParser())
 // --- ВЕБХУКИ (Підключаємо ДО перевірки CSRF та лімітерів) ---
 app.use('/api/webhooks', require('./routes/webhooks'))
 
-// CSRF захист через перевірку Origin
+// CSRF захист через перевірку Origin (точний збіг, не startsWith)
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
-  const origin = req.headers.origin || req.headers.referer || ''
   const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'https://aperio.pp.ua',
     'https://www.aperio.pp.ua'
   ]
-  if (allowedOrigins.some(allowed => origin.startsWith(allowed))) return next()
+  const raw = req.headers.origin || req.headers.referer || ''
+  let origin = ''
+  try { origin = new URL(raw).origin } catch { origin = '' } // S4: дістаємо чистий origin
+  if (allowedOrigins.includes(origin)) return next()          // S4: === замість startsWith
   return res.status(403).json({ error: 'CSRF перевірка не пройдена' })
 })
 
@@ -86,8 +88,21 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+// S6: жорсткий ліміт на верифікацію email і повторну відправку коду
+// (захист від брутфорсу коду та спаму/випалювання квоти Resend)
+const verifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  message: { error: 'Забагато спроб верифікації. Спробуй за годину.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+app.use('/api/auth/verify-email', verifyLimiter)        // S6
+app.use('/api/auth/resend-verification', verifyLimiter) // S6
 app.use('/api/auth', authLimiter)
 app.use('/api/ai/analyze', aiLimiter)
+app.use('/api/import/preview', aiLimiter)               // S5: preview теж кличе Claude
 app.use('/api/admin', adminLimiter)
 app.use('/api', generalLimiter)
 

@@ -20,6 +20,15 @@ const COOKIE_OPTIONS = {
   domain: isAperio ? '.aperio.pp.ua' : undefined,
 }
 
+// S6: constant-time порівняння (для коду верифікації)
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  const ab = Buffer.from(a)
+  const bb = Buffer.from(b)
+  if (ab.length !== bb.length) return false
+  return crypto.timingSafeEqual(ab, bb)
+}
+
 // Реєстрація
 router.post('/register', async (req, res) => {
   try {
@@ -65,7 +74,7 @@ if (!verifyData.success) {
       data: { email: email.toLowerCase().trim(), password: hashed, name: name.trim() }
     })
 
-    const verifyCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const verifyCode = crypto.randomInt(100000, 1000000).toString()
 const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
 await prisma.user.update({
@@ -177,14 +186,30 @@ router.get('/me', async (req, res) => {
 })
 
 router.get('/google', (req, res) => {
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${process.env.GOOGLE_REDIRECT_URI}&response_type=code&scope=email profile&prompt=select_account`
+  // S9: випадковий state проти login-CSRF; кладемо в коротку cookie
+  const state = crypto.randomBytes(16).toString('hex')
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax', // lax — щоб cookie дійшла на callback (top-level GET redirect)
+    maxAge: 10 * 60 * 1000,
+    domain: isAperio ? '.aperio.pp.ua' : undefined,
+  })
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${process.env.GOOGLE_REDIRECT_URI}&response_type=code&scope=email profile&prompt=select_account&state=${state}`
   res.redirect(authUrl)
 })
 
 // 2. Колбек (Google повертає сюди код)
 router.get('/google/callback', async (req, res) => {
-  const { code } = req.query
+  const { code, state } = req.query
   if (!code) return res.redirect(`${FRONTEND_URL}/login?error=no_code`)
+
+  // S9: звіряємо state з cookie і одразу його чистимо
+  if (!state || state !== req.cookies.oauth_state) {
+    res.clearCookie('oauth_state', { domain: isAperio ? '.aperio.pp.ua' : undefined })
+    return res.redirect(`${FRONTEND_URL}/login?error=bad_state`)
+  }
+  res.clearCookie('oauth_state', { domain: isAperio ? '.aperio.pp.ua' : undefined })
 
   try {
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -206,6 +231,11 @@ router.get('/google/callback', async (req, res) => {
     })
     const userData = await userResponse.json()
 
+    // S9: переконуємось що Google підтвердив пошту
+    if (!userData.email || userData.verified_email === false) {
+      return res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`)
+    }
+
     let user = await prisma.user.findUnique({ where: { email: userData.email } })
 
     if (!user) {
@@ -215,7 +245,8 @@ router.get('/google/callback', async (req, res) => {
         data: {
           email: userData.email,
           name: userData.name || 'Користувач Google',
-          password: hashed
+          password: hashed,
+          emailVerified: true // S14: Google вже верифікував email
         }
       })
     }
@@ -253,7 +284,7 @@ router.post('/verify-email', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Користувача не знайдено' })
     if (user.emailVerified) return res.json({ success: true, alreadyVerified: true })
 
-    if (user.verifyToken !== code) {
+    if (!safeEqual(user.verifyToken, code)) {
       return res.status(400).json({ error: 'Невірний код' })
     }
 
@@ -284,7 +315,7 @@ router.post('/resend-verification', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Користувача не знайдено' })
     if (user.emailVerified) return res.json({ success: true })
 
-    const verifyCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const verifyCode = crypto.randomInt(100000, 1000000).toString()
     const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
     await prisma.user.update({

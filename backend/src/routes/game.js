@@ -352,7 +352,7 @@ router.post('/sync', auth, async (req, res) => {
     res.json({ ok: true })
   } catch (e) {
     console.error('SYNC ERROR:', e.message, e.stack)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 

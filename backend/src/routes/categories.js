@@ -1,8 +1,22 @@
 const express = require('express')
 const prisma = require('../prisma')
 const auth = require('../middleware/auth')
+const { z } = require('zod') // S7
 
 const router = express.Router()
+
+// S7: валідація вводу (раніше name/icon/color/type приймались як завгодно)
+const HEX = /^#[0-9a-fA-F]{6}$/
+const createSchema = z.object({
+  name: z.string().trim().min(1, 'Назва обовʼязкова').max(50, 'Назва задовга'),
+  type: z.enum(['income', 'expense'], { error: 'Тип має бути income або expense' }),
+  icon: z.string().max(200).optional().nullable(),
+  color: z.string().regex(HEX, 'Колір має бути у форматі #RRGGBB').optional().nullable(),
+})
+const updateSchema = z.object({
+  icon: z.string().max(200).optional().nullable(),
+  color: z.string().regex(HEX, 'Колір має бути у форматі #RRGGBB').optional().nullable(),
+})
 
 router.get('/', auth, async (req, res) => {
   try {
@@ -39,25 +53,35 @@ router.get('/', auth, async (req, res) => {
 
     res.json(sorted)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('Category error:', e.message)
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
 router.post('/', auth, async (req, res) => {
+  const parsed = createSchema.safeParse(req.body) // S7
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message })
+  }
   try {
-    const { name, icon, color, type } = req.body
+    const { name, icon, color, type } = parsed.data
     const category = await prisma.category.create({
       data: { name, icon, color, type, userId: req.userId }
     })
     res.json(category)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('Category POST error:', e.message)
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
 router.put('/:id', auth, async (req, res) => {
+  const parsed = updateSchema.safeParse(req.body) // S7
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message })
+  }
   try {
-    const { icon, color } = req.body
+    const { icon, color } = parsed.data
     const cat = await prisma.category.findUnique({ where: { id: req.params.id } })
     if (!cat || cat.userId !== req.userId) return res.status(403).json({ error: 'Немає доступу' })
     const updated = await prisma.category.update({
@@ -66,7 +90,8 @@ router.put('/:id', auth, async (req, res) => {
     })
     res.json(updated)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('Category PUT error:', e.message)
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -77,7 +102,8 @@ router.delete('/:id', auth, async (req, res) => {
     await prisma.category.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error('Category error:', e.message)
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 

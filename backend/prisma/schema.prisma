@@ -138,3 +138,7 @@ model Feedback {
   rating    Int?
   createdAt DateTime @default(now())
 }
+model ProcessedDonation {
+  id        String   @id   // statementItem.id з Monobank — захист від повторного зарахування
+  createdAt DateTime @default(now())
+}

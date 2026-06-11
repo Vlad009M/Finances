@@ -18,7 +18,7 @@ router.get('/users', auth, requireRoot, async (req, res) => {
     })
     res.json(users)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -39,7 +39,7 @@ router.get('/stats', auth, requireRoot, async (req, res) => {
       totalExpense: totalExpense._sum.amount || 0,
     })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -59,7 +59,7 @@ router.patch('/users/:id/role', auth, requireRoot, async (req, res) => {
     })
     res.json({ success: true, role: user.role })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -76,7 +76,7 @@ router.patch('/users/:id/block', auth, requireRoot, async (req, res) => {
     })
     res.json({ success: true, blocked: updated.blocked })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -94,7 +94,7 @@ router.delete('/users/:id', auth, requireRoot, async (req, res) => {
     await prisma.user.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -110,7 +110,7 @@ router.post('/messages', auth, requireRoot, async (req, res) => {
     })
     res.json(message)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 

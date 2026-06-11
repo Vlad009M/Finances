@@ -193,6 +193,9 @@ router.post('/', auth, async (req, res) => {
     if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
       return res.status(400).json({ error: 'Немає транзакцій для імпорту' })
     }
+    if (transactions.length > 1000) {
+      return res.status(400).json({ error: 'Забагато транзакцій за раз (макс. 1000)' }) // S5
+    }
 
     // Отримуємо категорії юзера
     const categories = await prisma.category.findMany({
@@ -241,11 +244,17 @@ router.post('/', auth, async (req, res) => {
 
       if (!categoryId) continue
 
+      // S7: валідація вхідних даних (Monobank-файл — теж недовірений ввід)
+      const amt = parseFloat(tx.amount)
+      const date = new Date(tx.date)
+      if (!Number.isFinite(amt) || isNaN(date.getTime())) continue
+      const type = ['income', 'expense', 'transfer'].includes(tx.type) ? tx.type : 'expense'
+
       toImport.push({
-        amount: parseFloat(tx.amount),
-        type: tx.type,
-        description: tx.description || '',
-        date: new Date(tx.date),
+        amount: Math.abs(amt),
+        type,
+        description: (tx.description || '').slice(0, 500),
+        date,
         userId: req.userId,
         categoryId
       })
@@ -265,7 +274,7 @@ router.post('/', auth, async (req, res) => {
     })
   } catch (e) {
     console.error('Import error:', e)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка імпорту' })
   }
 })
 
@@ -273,6 +282,13 @@ router.post('/', auth, async (req, res) => {
 router.post('/preview', auth, async (req, res) => {
   try {
     const { transactions } = req.body
+
+    if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ error: 'Немає транзакцій' }) // S5
+    }
+    if (transactions.length > 1000) {
+      return res.status(400).json({ error: 'Забагато транзакцій за раз (макс. 1000)' }) // S5
+    }
 
     const categories = await prisma.category.findMany({
       where: { userId: req.userId }
@@ -312,8 +328,8 @@ const withKeywords = transactions.map(tx => {
   }
 })
 
-// AI тільки для тих що пішли в "Інше"
-const needsAI = withKeywords.filter(tx => tx._needsAI)
+// AI тільки для тих що пішли в "Інше" (S5: не більше 100 за раз — контроль витрат)
+const needsAI = withKeywords.filter(tx => tx._needsAI).slice(0, 100)
 
 if (needsAI.length > 0) {
   try {
@@ -343,7 +359,7 @@ const previewed = withKeywords.map(tx => {
 res.json({ transactions: previewed, categories })
   } catch (e) {
     console.error('Preview error:', e)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка обробки файлу' })
   }
 })
 

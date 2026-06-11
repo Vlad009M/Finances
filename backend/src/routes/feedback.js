@@ -32,7 +32,7 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json(feedback)
   } catch (e) {
     console.error('Feedback POST error:', e.message)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 
@@ -51,7 +51,7 @@ router.get('/', auth, async (req, res) => {
     res.json(feedbacks)
   } catch (e) {
     console.error('Feedback GET error:', e.message)
-    res.status(500).json({ error: e.message })
+    res.status(500).json({ error: 'Помилка сервера' })
   }
 })
 

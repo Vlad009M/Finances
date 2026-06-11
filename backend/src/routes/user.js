@@ -35,7 +35,12 @@ router.put('/profile', auth, async (req, res) => {
 router.put('/password', auth, async (req, res) => {
   const schema = z.object({
     oldPassword: z.string().min(1, 'Введи старий пароль'),
-    newPassword: z.string().min(6, 'Новий пароль мінімум 6 символів'),
+    // S12: та сама політика, що й при реєстрації
+    newPassword: z.string()
+      .min(8, 'Пароль мінімум 8 символів')
+      .regex(/[A-Z]/, 'Пароль має містити велику літеру')
+      .regex(/[0-9]/, 'Пароль має містити цифру')
+      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Пароль має містити спецсимвол'),
   })
 
   const parsed = schema.safeParse(req.body)

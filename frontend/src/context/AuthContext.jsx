@@ -3,8 +3,23 @@ import api from '../api/index.js';
 
 const AuthContext = createContext();
 
+// Безпечна функція для діставання юзера з кешу
+const getStoredUser = () => {
+  try {
+    const item = localStorage.getItem('user');
+    // Перевіряємо, щоб item не був порожнім і не дорівнював рядку "undefined"
+    if (item && item !== "undefined") {
+      return JSON.parse(item);
+    }
+    return null;
+  } catch (error) {
+    console.error("Помилка парсингу user з localStorage:", error);
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
+  const [user, setUser] = useState(getStoredUser());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -35,16 +35,17 @@ router.get('/limits', auth, async (req, res) => {
 
 // 2. Оновлений ендпоінт аналізу
 router.post('/analyze', auth, async (req, res) => {
+  let isAdmin = false
+  let charged = false // S5: чи списано токен (для повернення при помилці)
   try {
     // --- ПЕРЕВІРКА ЛІМІТІВ ---
     let user = await prisma.user.findUnique({ where: { id: req.userId } })
     const now = new Date()
     const lastRefill = new Date(user.lastRefillAt)
-    
-    // Визначаємо, чи це ти (по email або ролі)
-    const isAdmin = user.email === 'matovkavlad@gmail.com' || user.role === 'ROOT';
-    
-    // Перевіряємо, чи не час оновити ліміт (для звичайних юзерів)
+
+    isAdmin = user.role === 'ROOT' // S5: без хардкоду email
+
+    // Авто-рефіл кожні 12 годин
     if (!isAdmin && (now - lastRefill) / (1000 * 60 * 60) >= 12) {
       user = await prisma.user.update({
         where: { id: req.userId },
@@ -52,7 +53,7 @@ router.post('/analyze', auth, async (req, res) => {
       })
     }
 
-    // Блокуємо тільки якщо це НЕ адмін і токенів 0
+    // Швидка (неавторитетна) перевірка — щоб не робити зайву роботу для тих, у кого 0
     if (!isAdmin && user.aiTokens <= 0) {
       return res.status(403).json({ error: 'LIMIT_REACHED' })
     }
@@ -121,26 +122,34 @@ ${categoryText}
 🎯 РЕКОМЕНДОВАНИЙ БЮДЖЕТ
 (розбивка по категоріях на наступний місяць)`
 
+    // S5: атомарно знімаємо токен ПЕРЕД запитом до Claude (захист від TOCTOU).
+    // updateMany з умовою aiTokens > 0 не дасть піти в мінус при гонці запитів.
+    if (!isAdmin) {
+      const dec = await prisma.user.updateMany({
+        where: { id: req.userId, aiTokens: { gt: 0 } },
+        data: { aiTokens: { decrement: 1 } }
+      })
+      if (dec.count === 0) return res.status(403).json({ error: 'LIMIT_REACHED' })
+      charged = true
+    }
+
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }]
     })
 
-    // --- ЗНІМАЄМО ТОКЕН ---
-    // Віднімаємо токен ТІЛЬКИ якщо це НЕ адмін
-    if (!isAdmin) {
-      await prisma.user.update({
-        where: { id: req.userId },
-        data: { aiTokens: { decrement: 1 } }
-      })
-    }
-    // -----------------------
-
     res.json({ analysis: message.content[0].text })
   } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: e.message })
+    // S5: повертаємо токен, якщо аналіз не вдався після списання
+    if (charged) {
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { aiTokens: { increment: 1 } }
+      }).catch(() => {})
+    }
+    console.error('AI analyze error:', e)
+    res.status(500).json({ error: 'Не вдалося виконати AI аналіз' }) // S8: без e.message
   }
 })
 
