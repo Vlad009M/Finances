@@ -754,7 +754,7 @@ const handleResendCode = async () => {
                                 style={{ ...s.actionBtn, opacity: t._optimistic ? 0.3 : 1 }} 
                                 title={t._optimistic ? 'Збереження...' : 'Редагувати'}
                                 disabled={t._optimistic}>
-                              <img src="/icons/edit.svg" width={28} height={28} alt="edit" />
+                              <img src="/icons/edit.svg" width={isMobile ? 24 : 28} height={isMobile ? 24 : 28} alt="edit" />
                             </button>
                             <button 
                                   onClick={() => !t._optimistic && deleteTransaction(t.id)} 
@@ -762,7 +762,7 @@ const handleResendCode = async () => {
                                   title={t._optimistic ? 'Збереження...' : 'Видалити'}
                                   disabled={t._optimistic}
                                 >
-                              <img src="/icons/delete.svg" width={28} height={28} alt="delete" />
+                              <img src="/icons/delete.svg" width={isMobile ? 24 : 28} height={isMobile ? 24 : 28} alt="delete" />
                             </button>
                           </div>
                         </div>
@@ -824,7 +824,7 @@ const handleResendCode = async () => {
               </div>
 
               {/* RIGHT COLUMN */}
-              <div style={s.rightCol}>
+              {!isMobile && <div style={s.rightCol}>
                 <div style={s.rightCard}>
                   <div style={s.sectionTitle}>Витрати по місяцях</div>
                   <div style={s.bars}>
@@ -873,7 +873,7 @@ const handleResendCode = async () => {
                 </div>
 
                 <BudgetSection categories={categories} categoriesMeta={CATEGORIES} filterMonth={filterMonth} filterYear={filterYear} />
-              </div>
+              </div>}
             </div>
           </div>
         )}
@@ -1161,12 +1161,12 @@ const s = {
   sectionTitle: { fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' },
   seeAll: { fontSize: 12, color: '#7F77DD', cursor: 'pointer' },
   txCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12 },
-  txRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' },
+  txRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: '0.5px solid var(--color-border-tertiary)' },
   txIcon: { width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   txInfo: { flex: 1, minWidth: 0 },
   txName: { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
-  txDate: { fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  txAmount: { fontSize: 14, fontWeight: 500, flexShrink: 0 },
+  txDate: { fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' },
+  txAmount: { fontSize: 13, fontWeight: 500, flexShrink: 0, minWidth: 60, textAlign: 'right' },
   actionBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '2px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   rightCol: { display: 'flex', flexDirection: 'column', gap: 14 },
   rightCard: { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: 16 },
