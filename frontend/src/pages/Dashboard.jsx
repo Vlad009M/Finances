@@ -385,40 +385,49 @@ const handleResendCode = async () => {
   const today = now.getDate()
   const daysLeft = daysInMonth - today + 1 // включаючи сьогодні
 
-  // Витрати за весь місяць
-  const monthExpense = allTransactions.filter(t => {
-    const d = new Date(t.date)
-    return t.type === 'expense' &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-  }).reduce((s, t) => s + t.amount, 0)
-
-  // Витрати тільки сьогодні
-  const spentToday = allTransactions.filter(t => {
-    const d = new Date(t.date)
-    return t.type === 'expense' &&
-      d.getDate() === today &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-  }).reduce((s, t) => s + t.amount, 0)
-
   if (stats.income === 0) return null
 
   const totalBudget = budgetsData.reduce((s, b) => s + b.amount, 0)
-  const baseAmount = totalBudget > 0 ? totalBudget : stats.income
+  const hasBudget = totalBudget > 0
+
+  // Категорії, на які заданий бюджет (щоб витрати рахувати лише по них)
+  const budgetCatIds = new Set(budgetsData.map(b => b.categoryId))
+
+  // База розрахунку
+  const baseAmount = hasBudget ? totalBudget : stats.income
+
+  // Витрати за місяць:
+  //  - у бюджетному режимі: лише по забюджетованих категоріях (= сума spent з бекенду)
+  //  - без бюджетів: усі витрати місяця
+  const monthExpense = hasBudget
+    ? budgetsData.reduce((s, b) => s + b.spent, 0)
+    : allTransactions.filter(t => {
+        const d = new Date(t.date)
+        return t.type === 'expense' &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+      }).reduce((s, t) => s + t.amount, 0)
+
+  // Витрати тільки сьогодні (у бюджетному режимі — теж лише по забюджетованих категоріях)
+  const spentToday = allTransactions.filter(t => {
+    const d = new Date(t.date)
+    const sameDay = t.type === 'expense' &&
+      d.getDate() === today &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    return hasBudget ? (sameDay && budgetCatIds.has(t.categoryId)) : sameDay
+  }).reduce((s, t) => s + t.amount, 0)
 
   // Залишилось грошей з бюджету/доходу
   const remaining = baseAmount - monthExpense
-  if (remaining <= 0) return { value: 0, baseAmount, monthExpense, spentToday, daysLeft, hasBudget: totalBudget > 0 }
+  if (remaining <= 0) return { value: 0, baseAmount, monthExpense, spentToday, daysLeft, dailyLimit: 0, hasBudget }
 
-   // B: «денний конверт». Ліміт рахуємо від залишку НА ПОЧАТОК ДНЯ
-  // (remaining уже мінус сьогодні, тож додаємо spentToday назад),
-  // потім віднімаємо те, що вже витрачено сьогодні.
+  // B: «денний конверт». Ліміт рахуємо від залишку НА ПОЧАТОК ДНЯ
   const remainingStartOfDay = remaining + spentToday
   const dailyLimit = remainingStartOfDay / daysLeft
   const value = Math.max(0, dailyLimit - spentToday)
 
-  return { value, baseAmount, monthExpense, spentToday, daysLeft, dailyLimit, hasBudget: totalBudget > 0 }
+  return { value, baseAmount, monthExpense, spentToday, daysLeft, dailyLimit, hasBudget }
 }
 
   const safeData = calcSafeToSpend()
