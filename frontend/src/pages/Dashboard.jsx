@@ -19,6 +19,7 @@ import { useIsMobile } from '../hooks/useResponsive.js'
 import posthog from 'posthog-js'
 import FeedbackModal from '../components/FeedbackModal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { calcSafeToSpend } from '../utils/safeToSpend.js'
 
 const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
 
@@ -380,45 +381,13 @@ const handleResendCode = async () => {
   const incomeChange = prevStats.income > 0 ? Math.round(((stats.income - prevStats.income) / prevStats.income) * 100) : null
   const expenseChange = prevStats.expense > 0 ? Math.round(((stats.expense - prevStats.expense) / prevStats.expense) * 100) : null
   const savings = stats.income > 0 ? Math.round(((stats.income - stats.expense) / stats.income) * 100) : 0
-  const calcSafeToSpend = () => {
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const today = now.getDate()
-  const daysLeft = daysInMonth - today + 1 // включаючи сьогодні
 
-  // Витрати за весь місяць
-  const monthExpense = allTransactions.filter(t => {
-    const d = new Date(t.date)
-    return t.type === 'expense' &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-  }).reduce((s, t) => s + t.amount, 0)
-
-  // Витрати тільки сьогодні
-  const spentToday = allTransactions.filter(t => {
-    const d = new Date(t.date)
-    return t.type === 'expense' &&
-      d.getDate() === today &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-  }).reduce((s, t) => s + t.amount, 0)
-
-  if (stats.income === 0) return null
-
-  const totalBudget = budgetsData.reduce((s, b) => s + b.amount, 0)
-  const baseAmount = totalBudget > 0 ? totalBudget : stats.income
-
-  // Залишилось грошей з бюджету/доходу
-  const remaining = baseAmount - monthExpense
-  if (remaining <= 0) return { value: 0, baseAmount, monthExpense, spentToday, daysLeft, hasBudget: totalBudget > 0 }
-
-  // Адаптивно: ділимо те що залишилось на дні що залишились, мінус сьогоднішні витрати
-  const dailyLimit = remaining / daysLeft
-  const value = Math.max(0, dailyLimit - spentToday)
-
-  return { value, baseAmount, monthExpense, spentToday, daysLeft, hasBudget: totalBudget > 0 }
-}
-
-  const safeData = calcSafeToSpend()
+   const safeData = calcSafeToSpend({
+    now,
+    transactions: allTransactions,
+    income: stats.income,
+    budgets: budgetsData,
+  })
   const safeToSpend = safeData?.value ?? null
   const hasBudgets = budgetsData.length > 0
   const [showSafeTooltip, setShowSafeTooltip] = useState(false)
@@ -677,6 +646,14 @@ const handleResendCode = async () => {
                               <span style={{ ...s.tooltipValue, fontWeight: 600 }}>
                                 ₴{Math.round(safeData.baseAmount - safeData.monthExpense).toLocaleString()} на {safeData.daysLeft} {safeData.daysLeft === 1 ? 'день' : safeData.daysLeft < 5 ? 'дні' : 'днів'}
                               </span>
+                            </div>
+                            <div style={s.tooltipRow}>
+                              <span style={s.tooltipLabel}>Денний ліміт</span>
+                              <span style={s.tooltipValue}>₴{Math.round(safeData.dailyLimit).toLocaleString()}</span>
+                            </div>
+                            <div style={s.tooltipRow}>
+                              <span style={s.tooltipLabel}>Витрачено сьогодні</span>
+                              <span style={s.tooltipValue}>−₴{Math.round(safeData.spentToday).toLocaleString()}</span>
                             </div>
                             <div style={s.tooltipFooter}>
                               Тому сьогодні ти можеш безпечно витратити <b>₴{Math.round(safeToSpend).toLocaleString()}</b>
