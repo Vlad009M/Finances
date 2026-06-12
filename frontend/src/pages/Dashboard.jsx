@@ -411,11 +411,14 @@ const handleResendCode = async () => {
   const remaining = baseAmount - monthExpense
   if (remaining <= 0) return { value: 0, baseAmount, monthExpense, spentToday, daysLeft, hasBudget: totalBudget > 0 }
 
-  // Адаптивно: ділимо те що залишилось на дні що залишились, мінус сьогоднішні витрати
-  const dailyLimit = remaining / daysLeft
+   // B: «денний конверт». Ліміт рахуємо від залишку НА ПОЧАТОК ДНЯ
+  // (remaining уже мінус сьогодні, тож додаємо spentToday назад),
+  // потім віднімаємо те, що вже витрачено сьогодні.
+  const remainingStartOfDay = remaining + spentToday
+  const dailyLimit = remainingStartOfDay / daysLeft
   const value = Math.max(0, dailyLimit - spentToday)
 
-  return { value, baseAmount, monthExpense, spentToday, daysLeft, hasBudget: totalBudget > 0 }
+  return { value, baseAmount, monthExpense, spentToday, daysLeft, dailyLimit, hasBudget: totalBudget > 0 }
 }
 
   const safeData = calcSafeToSpend()
@@ -677,6 +680,14 @@ const handleResendCode = async () => {
                               <span style={{ ...s.tooltipValue, fontWeight: 600 }}>
                                 ₴{Math.round(safeData.baseAmount - safeData.monthExpense).toLocaleString()} на {safeData.daysLeft} {safeData.daysLeft === 1 ? 'день' : safeData.daysLeft < 5 ? 'дні' : 'днів'}
                               </span>
+                            </div>
+                            <div style={s.tooltipRow}>
+                              <span style={s.tooltipLabel}>Денний ліміт</span>
+                              <span style={s.tooltipValue}>₴{Math.round(safeData.dailyLimit).toLocaleString()}</span>
+                            </div>
+                            <div style={s.tooltipRow}>
+                              <span style={s.tooltipLabel}>Витрачено сьогодні</span>
+                              <span style={s.tooltipValue}>−₴{Math.round(safeData.spentToday).toLocaleString()}</span>
                             </div>
                             <div style={s.tooltipFooter}>
                               Тому сьогодні ти можеш безпечно витратити <b>₴{Math.round(safeToSpend).toLocaleString()}</b>
