@@ -15,7 +15,8 @@ const httpLogger = (req, res, next) => {
       status: res.statusCode,
       latencyMs: latencyMs,
       ip: getClientIp(req),
-      userAgent: req.get('user-agent') || 'unknown'
+      userAgent: req.get('user-agent') || 'unknown',
+      origin: req.headers.origin || req.headers.referer || 'unknown'
     }
 
     // Відправляємо в Grafana/Loki
