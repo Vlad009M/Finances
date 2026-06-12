@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const prisma = require('../prisma') // S11: singleton замість власного new PrismaClient()
+const { logSecurityEvent, getClientIp } = require('../utils/securityLog') // SIEM
 
 module.exports = async (req, res, next) => {
   const token = req.cookies.token
@@ -10,6 +11,13 @@ module.exports = async (req, res, next) => {
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } })
     if (!user) return res.status(401).json({ error: 'Користувача не знайдено' })
     if (user.blocked) return res.status(403).json({ error: 'Акаунт заблоковано' })
+
+    // S3: відкликання сесій — токен зі старою версією більше не дійсний.
+    // (?? 0) — щоб старі токени без поля не розлогінились одразу після деплою.
+    if ((decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+      logSecurityEvent('auth.token.revoked', { ip: getClientIp(req), userId: user.id }) // SIEM
+      return res.status(401).json({ error: 'Сесію завершено. Увійди знову.' })
+    }
 
     req.userId = user.id
     req.userRole = user.role // S3: свіжа роль із БД, а не decoded.role з JWT

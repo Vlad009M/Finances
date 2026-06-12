@@ -57,6 +57,13 @@ app.use((req, res, next) => {
 // Поза CF (локально / прямий хіт на origin) — фолбек на req.ip.
 const clientIpKey = (req) => req.headers['cf-connecting-ip'] || req.ip
 
+// SIEM: коли спрацював будь-який ліміт — фіксуємо подію ratelimit.hit
+const { logSecurityEvent } = require('./utils/securityLog')
+const onLimit = (req, res, next, options) => {
+  logSecurityEvent('ratelimit.hit', { ip: clientIpKey(req), path: req.originalUrl, method: req.method })
+  res.status(options.statusCode).json(options.message)
+}
+
 // Авторизація: 10 спроб за 15 хвилин
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -65,6 +72,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // AI аналіз: 10 запитів за годину (захист від витрат на API) 
@@ -75,6 +83,7 @@ const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // Адмін: 30 запитів за 15 хвилин
@@ -85,6 +94,7 @@ const adminLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // Загальний ліміт на всі інші API
@@ -95,6 +105,7 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // S6: жорсткий ліміт на верифікацію email і повторну відправку коду
@@ -106,6 +117,7 @@ const verifyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 app.use('/api/auth/verify-email', verifyLimiter)        // S6
