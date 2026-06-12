@@ -2,6 +2,7 @@ const express = require('express')
 const Anthropic = require('@anthropic-ai/sdk')
 const prisma = require('../prisma')
 const auth = require('../middleware/auth')
+const { logSecurityEvent, getClientIp } = require('../utils/securityLog') // SIEM
 
 const router = express.Router()
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -55,6 +56,7 @@ router.post('/analyze', auth, async (req, res) => {
 
     // Швидка (неавторитетна) перевірка — щоб не робити зайву роботу для тих, у кого 0
     if (!isAdmin && user.aiTokens <= 0) {
+      logSecurityEvent('ai.limit', { ip: getClientIp(req), userId: req.userId }) // SIEM
       return res.status(403).json({ error: 'LIMIT_REACHED' })
     }
     // -------------------------
@@ -129,7 +131,10 @@ ${categoryText}
         where: { id: req.userId, aiTokens: { gt: 0 } },
         data: { aiTokens: { decrement: 1 } }
       })
-      if (dec.count === 0) return res.status(403).json({ error: 'LIMIT_REACHED' })
+      if (dec.count === 0) {
+        logSecurityEvent('ai.limit', { ip: getClientIp(req), userId: req.userId }) // SIEM
+        return res.status(403).json({ error: 'LIMIT_REACHED' })
+      }
       charged = true
     }
 

@@ -12,6 +12,7 @@ const cors = require('cors')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const cookieParser = require('cookie-parser')
+const httpLogger = require('./middleware/httpLogger') // <--- ДОДАНО: Імпорт логера
 
 const app = express()
 app.set('trust proxy', 1)
@@ -31,6 +32,10 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }))
 app.use(cookieParser())
+
+// <--- ДОДАНО: Глобальний логер трафіку. 
+// Стоїть тут, щоб фіксувати ВСЕ до того, як спрацює CSRF чи Rate Limit
+app.use(httpLogger) 
 
 // --- ВЕБХУКИ (Підключаємо ДО перевірки CSRF та лімітерів) ---
 app.use('/api/webhooks', require('./routes/webhooks'))
@@ -57,6 +62,13 @@ app.use((req, res, next) => {
 // Поза CF (локально / прямий хіт на origin) — фолбек на req.ip.
 const clientIpKey = (req) => req.headers['cf-connecting-ip'] || req.ip
 
+// SIEM: коли спрацював будь-який ліміт — фіксуємо подію ratelimit.hit
+const { logSecurityEvent } = require('./utils/securityLog')
+const onLimit = (req, res, next, options) => {
+  logSecurityEvent('ratelimit.hit', { ip: clientIpKey(req), path: req.originalUrl, method: req.method })
+  res.status(options.statusCode).json(options.message)
+}
+
 // Авторизація: 10 спроб за 15 хвилин
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -65,6 +77,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // AI аналіз: 10 запитів за годину (захист від витрат на API) 
@@ -75,6 +88,7 @@ const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // Адмін: 30 запитів за 15 хвилин
@@ -85,6 +99,7 @@ const adminLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // Загальний ліміт на всі інші API
@@ -95,6 +110,7 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 // S6: жорсткий ліміт на верифікацію email і повторну відправку коду
@@ -106,6 +122,7 @@ const verifyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: clientIpKey, // за Cloudflare: ключ за реальним IP клієнта
+  handler: onLimit, // SIEM: подія ratelimit.hit
 })
 
 app.use('/api/auth/verify-email', verifyLimiter)        // S6

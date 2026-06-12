@@ -2,6 +2,7 @@ const express = require('express')
 const prisma = require('../prisma')
 const auth = require('../middleware/auth')
 const requireRoot = require('../middleware/requireRoot')
+const { logSecurityEvent, getClientIp } = require('../utils/securityLog') // SIEM
 
 const router = express.Router()
 
@@ -57,6 +58,10 @@ router.patch('/users/:id/role', auth, requireRoot, async (req, res) => {
       where: { id: req.params.id },
       data: { role }
     })
+    logSecurityEvent('admin.action', {
+      ip: getClientIp(req), actorId: req.userId, action: 'role_change',
+      targetId: req.params.id, newRole: user.role,
+    })
     res.json({ success: true, role: user.role })
   } catch (e) {
     res.status(500).json({ error: 'Помилка сервера' })
@@ -73,6 +78,10 @@ router.patch('/users/:id/block', auth, requireRoot, async (req, res) => {
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: { blocked: !user.blocked }
+    })
+    logSecurityEvent('admin.action', {
+      ip: getClientIp(req), actorId: req.userId,
+      action: updated.blocked ? 'block' : 'unblock', targetId: req.params.id,
     })
     res.json({ success: true, blocked: updated.blocked })
   } catch (e) {
@@ -92,6 +101,9 @@ router.delete('/users/:id', auth, requireRoot, async (req, res) => {
     await prisma.transaction.deleteMany({ where: { userId: req.params.id } })
     await prisma.category.deleteMany({ where: { userId: req.params.id } })
     await prisma.user.delete({ where: { id: req.params.id } })
+    logSecurityEvent('admin.action', {
+      ip: getClientIp(req), actorId: req.userId, action: 'delete_user', targetId: req.params.id,
+    })
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ error: 'Помилка сервера' })

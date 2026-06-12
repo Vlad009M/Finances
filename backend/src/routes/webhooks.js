@@ -1,6 +1,7 @@
 const express = require('express')
 const crypto = require('crypto')
 const prisma = require('../prisma')
+const { logSecurityEvent, getClientIp } = require('../utils/securityLog') // SIEM
 
 const router = express.Router()
 
@@ -19,6 +20,7 @@ function safeEqual(a, b) {
 
 router.post('/monobank/:secret', async (req, res) => {
   if (!SECRET || !safeEqual(req.params.secret, SECRET)) {
+    logSecurityEvent('webhook.reject', { ip: getClientIp(req), path: '/webhooks/monobank' }) // SIEM
     return res.status(403).send('Forbidden')
   }
 

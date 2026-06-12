@@ -5,6 +5,7 @@ const crypto = require('crypto')
 const prisma = require('../prisma')
 const { sendVerificationEmail } = require('../email')
 const { signToken } = require('../utils/token') // S3
+const { logSecurityEvent, getClientIp, hashEmail } = require('../utils/securityLog') // SIEM
 
 const router = express.Router()
 
@@ -127,19 +128,25 @@ if (!verifyData.success) {
     // Однакове повідомлення щоб не розкривати чи існує email
     if (!user) {
       await bcrypt.compare(password, '$2b$12$invalidhashfortimingattackprevention000000000000000000')
+      logSecurityEvent('auth.login.fail', { ip: getClientIp(req), emailHash: hashEmail(email), reason: 'unknown_user' })
       return res.status(400).json({ error: 'Невірний email або пароль' })
     }
 
     if (user.blocked) {
+      logSecurityEvent('auth.login.fail', { ip: getClientIp(req), userId: user.id, reason: 'blocked' })
       return res.status(403).json({ error: 'Акаунт заблоковано. Зверніться до адміністратора.' })
     }
 
     const valid = await bcrypt.compare(password, user.password)
-    if (!valid) return res.status(400).json({ error: 'Невірний email або пароль' })
+    if (!valid) {
+      logSecurityEvent('auth.login.fail', { ip: getClientIp(req), userId: user.id, reason: 'bad_password' })
+      return res.status(400).json({ error: 'Невірний email або пароль' })
+    }
 
     const token = signToken(user) // S3: токен містить tokenVersion
 
     res.cookie('token', token, COOKIE_OPTIONS)
+    logSecurityEvent('auth.login.ok', { ip: getClientIp(req), userId: user.id, role: user.role })
     res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: user.emailVerified, avatarUrl: user.avatarUrl } })
   } catch (e) {
     res.status(500).json({ error: 'Помилка сервера' })
