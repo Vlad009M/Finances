@@ -46,8 +46,17 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'https://aperio.pp.ua',
-    'https://www.aperio.pp.ua'
+    'https://www.aperio.pp.ua',
+    'https://dev.aperio.pp.ua',
+    'http://localhost',       
+    'capacitor://localhost'
   ]
+
+  app.use(cors({
+  origin: ALLOWED_ORIGINS,
+  credentials: true
+}));
+
   const raw = req.headers.origin || req.headers.referer || ''
   let origin = ''
   try { origin = new URL(raw).origin } catch { origin = '' } // S4: дістаємо чистий origin

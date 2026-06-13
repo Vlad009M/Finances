@@ -10,3 +10,5 @@ dist/
 .Docs.md
 backup.bat
 .github\workflows\backup.yml
+.env.development
+.env.production
