@@ -49,7 +49,8 @@ app.use((req, res, next) => {
     'https://www.aperio.pp.ua',
     'https://dev.aperio.pp.ua',
     'http://localhost',       
-    'capacitor://localhost'
+    'capacitor://localhost',
+    'https://localhost'
   ]
 
   app.use(cors({
